@@ -1,0 +1,714 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 0. Global Default-Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Global Hardened Primitives ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isMaskedPhone(phone) {
+      return phone is string && phone.size() == 10 && phone.matches('^X{6}[0-9]{4}$');
+    }
+
+    function isValidDirectPhone(phone) {
+      return phone is string && phone.size() >= 10 && phone.size() <= 16 && phone.matches('^\\+?[0-9]{10,15}$');
+    }
+
+    function isValidTimestampBound(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    function isValidBoundedIdList(items) {
+      return items is list && items.size() <= 200;
+    }
+
+    // --- Top-Level Entity Schema Validators ---
+    function isValidUserRoleProfile(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.role in ['POSTER', 'DRIVER'] &&
+             data.displayName is string && data.displayName.size() >= 2 && data.displayName.size() <= 80 &&
+             data.kycVerified is bool &&
+             (data.rating is int || data.rating is float) && data.rating >= 1.0 && data.rating <= 5.0 &&
+             (!('vehicleNumberMasked' in data) || data.vehicleNumberMasked == null || (data.vehicleNumberMasked is string && data.vehicleNumberMasked.size() <= 30)) &&
+             (!('vehicleSizeFeet' in data) || data.vehicleSizeFeet == null || (data.vehicleSizeFeet is int && data.vehicleSizeFeet >= 6 && data.vehicleSizeFeet <= 80)) &&
+             (!('vehicleCapacityTons' in data) || data.vehicleCapacityTons == null || ((data.vehicleCapacityTons is int || data.vehicleCapacityTons is float) && data.vehicleCapacityTons >= 0.5 && data.vehicleCapacityTons <= 100.0)) &&
+             (!('vehicleBodyType' in data) || data.vehicleBodyType == null || data.vehicleBodyType in ['OPEN', 'CONTAINER']) &&
+             (!('isAvailable' in data) || data.isAvailable == null || data.isAvailable is bool) &&
+             (!('currentCity' in data) || data.currentCity == null || (data.currentCity is string && data.currentCity.size() <= 120)) &&
+             (!('currentLat' in data) || data.currentLat == null || ((data.currentLat is int || data.currentLat is float) && data.currentLat >= -90.0 && data.currentLat <= 90.0)) &&
+             (!('currentLng' in data) || data.currentLng == null || ((data.currentLng is int || data.currentLng is float) && data.currentLng >= -180.0 && data.currentLng <= 180.0)) &&
+             data.createdAt is timestamp &&
+             isValidTimestampBound(data.updatedAt);
+    }
+
+    function isValidUserPrivateKyc(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 100 &&
+             data.phoneNumber is string && data.phoneNumber.size() >= 10 && data.phoneNumber.size() <= 16 &&
+             isMaskedPhone(data.maskedPhone) &&
+             (!('drivingLicenseNumber' in data) || data.drivingLicenseNumber == null || (data.drivingLicenseNumber is string && data.drivingLicenseNumber.size() <= 30)) &&
+             (!('panNumber' in data) || data.panNumber == null || (data.panNumber is string && data.panNumber.size() <= 20)) &&
+             (!('aadhaarRedacted' in data) || data.aadhaarRedacted == null || (data.aadhaarRedacted is string && data.aadhaarRedacted.size() <= 60)) &&
+             (!('vehicleNumberFull' in data) || data.vehicleNumberFull == null || (data.vehicleNumberFull is string && data.vehicleNumberFull.size() <= 25)) &&
+             (!('selfieVerifiedAt' in data) || data.selfieVerifiedAt == null || isValidTimestampBound(data.selfieVerifiedAt)) &&
+             (!('leftEyeOpenProb' in data) || data.leftEyeOpenProb == null || ((data.leftEyeOpenProb is int || data.leftEyeOpenProb is float) && data.leftEyeOpenProb >= 0.0 && data.leftEyeOpenProb <= 1.0)) &&
+             (!('rightEyeOpenProb' in data) || data.rightEyeOpenProb == null || ((data.rightEyeOpenProb is int || data.rightEyeOpenProb is float) && data.rightEyeOpenProb >= 0.0 && data.rightEyeOpenProb <= 1.0)) &&
+             data.createdAt is timestamp &&
+             isValidTimestampBound(data.updatedAt);
+    }
+
+    function isValidLoadPost(data) {
+      return data.posterId is string && data.posterId.size() >= 1 && data.posterId.size() <= 128 &&
+             data.posterCompanyName is string && data.posterCompanyName.size() >= 2 && data.posterCompanyName.size() <= 100 &&
+             isMaskedPhone(data.maskedPosterPhone) &&
+             data.originCity is string && data.originCity.size() >= 2 && data.originCity.size() <= 140 &&
+             (data.originLat is int || data.originLat is float) && data.originLat >= -90.0 && data.originLat <= 90.0 &&
+             (data.originLng is int || data.originLng is float) && data.originLng >= -180.0 && data.originLng <= 180.0 &&
+             data.destinationCity is string && data.destinationCity.size() >= 2 && data.destinationCity.size() <= 140 &&
+             (data.destLat is int || data.destLat is float) && data.destLat >= -90.0 && data.destLat <= 90.0 &&
+             (data.destLng is int || data.destLng is float) && data.destLng >= -180.0 && data.destLng <= 180.0 &&
+             data.loadingWaypoints is list && data.loadingWaypoints.size() <= 8 &&
+             data.requiredSizeFeet is int && data.requiredSizeFeet >= 6 && data.requiredSizeFeet <= 80 &&
+             (data.requiredTonnage is int || data.requiredTonnage is float) && data.requiredTonnage >= 0.5 && data.requiredTonnage <= 100.0 &&
+             data.requiredBodyType in ['OPEN', 'CONTAINER'] &&
+             data.materialType is string && data.materialType.size() >= 2 && data.materialType.size() <= 100 &&
+             data.loadingDate is string && data.loadingDate.size() >= 2 && data.loadingDate.size() <= 30 &&
+             data.loadingTime is string && data.loadingTime.size() >= 2 && data.loadingTime.size() <= 30 &&
+             data.status in ['ACTIVE', 'ACCEPTED', 'BOOKED', 'CANCELLED', 'EXPIRED'] &&
+             (!('acceptedBidIds' in data) || data.acceptedBidIds == null || isValidBoundedIdList(data.acceptedBidIds)) &&
+             (!('acceptedDriverIds' in data) || data.acceptedDriverIds == null || isValidBoundedIdList(data.acceptedDriverIds)) &&
+             data.bidCount is int && data.bidCount >= 0 && data.bidCount <= 10000 &&
+             data.expiresAtEpochMillis is int && data.expiresAtEpochMillis > 0 &&
+             data.createdAt is timestamp &&
+             isValidTimestampBound(data.updatedAt);
+    }
+
+    function isValidLoadContactVault(data, expectedLoadId) {
+      return data.loadId == expectedLoadId &&
+             data.posterId is string && data.posterId.size() >= 1 && data.posterId.size() <= 128 &&
+             data.posterDirectPhone is string && data.posterDirectPhone.size() >= 10 && data.posterDirectPhone.size() <= 16 &&
+             data.exactPickupAddress is string && data.exactPickupAddress.size() >= 2 && data.exactPickupAddress.size() <= 300 &&
+             (!('authorizedDriverIds' in data) || data.authorizedDriverIds == null || isValidBoundedIdList(data.authorizedDriverIds)) &&
+             data.createdAt is timestamp &&
+             isValidTimestampBound(data.updatedAt);
+    }
+
+    function isValidBid(data, expectedLoadId) {
+      return data.loadId == expectedLoadId &&
+             data.posterId is string && data.posterId.size() >= 1 && data.posterId.size() <= 128 &&
+             data.driverId is string && data.driverId.size() >= 1 && data.driverId.size() <= 128 &&
+             data.driverAnonymousAlias is string && data.driverAnonymousAlias.size() >= 3 && data.driverAnonymousAlias.size() <= 40 &&
+             data.driverDisplayName is string && data.driverDisplayName.size() >= 2 && data.driverDisplayName.size() <= 80 &&
+             isMaskedPhone(data.maskedDriverPhone) &&
+             (data.driverRating is int || data.driverRating is float) && data.driverRating >= 1.0 && data.driverRating <= 5.0 &&
+             data.vehicleDetails is string && data.vehicleDetails.size() >= 3 && data.vehicleDetails.size() <= 100 &&
+             data.maskedVehicleNumber is string && data.maskedVehicleNumber.size() >= 4 && data.maskedVehicleNumber.size() <= 25 &&
+             (data.bidAmount is int || data.bidAmount is float) && data.bidAmount > 0 && data.bidAmount <= 10000000 &&
+             data.availabilityTime is string && data.availabilityTime.size() >= 2 && data.availabilityTime.size() <= 60 &&
+             data.status in ['PENDING', 'ACCEPTED', 'REJECTED'] &&
+             data.createdAt is timestamp &&
+             isValidTimestampBound(data.updatedAt);
+    }
+
+    function isValidBidPrivateContact(data, expectedLoadId, expectedBidId) {
+      return data.bidId == expectedBidId &&
+             data.loadId == expectedLoadId &&
+             data.driverId is string && data.driverId.size() >= 1 && data.driverId.size() <= 128 &&
+             data.posterId is string && data.posterId.size() >= 1 && data.posterId.size() <= 128 &&
+             data.driverDirectPhone is string && data.driverDirectPhone.size() >= 10 && data.driverDirectPhone.size() <= 16 &&
+             data.fullVehicleNumber is string && data.fullVehicleNumber.size() >= 4 && data.fullVehicleNumber.size() <= 25 &&
+             data.driverFullName is string && data.driverFullName.size() >= 2 && data.driverFullName.size() <= 100 &&
+             data.unlockedForPoster is bool &&
+             isValidTimestampBound(data.createdAt);
+    }
+
+    function isValidDriverTripEntry(data, expectedTripId) {
+      return data.tripId == expectedTripId &&
+             data.loadId is string && data.loadId.size() <= 128 &&
+             data.bidId is string && data.bidId.size() <= 128 &&
+             data.posterId is string && data.posterId.size() <= 128 &&
+             data.driverId is string && data.driverId.size() <= 128 &&
+             (data.bidAmount is int || data.bidAmount is float) && data.bidAmount > 0 && data.bidAmount <= 10000000 &&
+             data.bidStatus in ['PENDING', 'ACCEPTED', 'REJECTED'] &&
+             data.loadStatus in ['ACTIVE', 'ACCEPTED', 'BOOKED', 'CANCELLED', 'EXPIRED'] &&
+             (!('unlockedPosterPhone' in data) || data.unlockedPosterPhone == null || isValidDirectPhone(data.unlockedPosterPhone)) &&
+             data.createdAt is timestamp &&
+             isValidTimestampBound(data.updatedAt);
+    }
+
+    function isValidBidPhoneRecord(data, expectedBidId) {
+      return data.bidId == expectedBidId &&
+             isValidId(data.loadId) &&
+             data.posterId is string && data.posterId.size() >= 1 && data.posterId.size() <= 128 &&
+             data.driverId is string && data.driverId.size() >= 1 && data.driverId.size() <= 128 &&
+             data.driverFullName is string && data.driverFullName.size() >= 2 && data.driverFullName.size() <= 100 &&
+             data.driverFullPhone is string && data.driverFullPhone.size() >= 10 && data.driverFullPhone.size() <= 16 &&
+             (data.bidAmount is int || data.bidAmount is float) && data.bidAmount > 0 && data.bidAmount <= 10000000 &&
+             data.originCity is string && data.originCity.size() >= 2 && data.originCity.size() <= 140 &&
+             data.destinationCity is string && data.destinationCity.size() >= 2 && data.destinationCity.size() <= 140 &&
+             isValidTimestampBound(data.createdAt);
+    }
+
+    function isValidAcceptedDealRecord(data, expectedDealId) {
+      return (!('dealId' in data) || data.dealId == expectedDealId) &&
+             isValidId(data.loadId) &&
+             isValidId(data.acceptedBidId) &&
+             data.posterId is string && data.posterId.size() >= 1 && data.posterId.size() <= 128 &&
+             data.posterCompanyName is string && data.posterCompanyName.size() >= 2 && data.posterCompanyName.size() <= 100 &&
+             data.posterFullPhone is string && data.posterFullPhone.size() >= 10 && data.posterFullPhone.size() <= 16 &&
+             data.winningDriverId is string && data.winningDriverId.size() >= 1 && data.winningDriverId.size() <= 128 &&
+             data.winningDriverName is string && data.winningDriverName.size() >= 2 && data.winningDriverName.size() <= 100 &&
+             (!('driverFullPhone' in data) || data.driverFullPhone == null || (data.driverFullPhone is string && data.driverFullPhone.size() >= 10 && data.driverFullPhone.size() <= 16)) &&
+             (data.acceptedBidAmount is int || data.acceptedBidAmount is float) && data.acceptedBidAmount > 0 && data.acceptedBidAmount <= 10000000 &&
+             data.originCity is string && data.originCity.size() >= 2 && data.originCity.size() <= 140 &&
+             data.destinationCity is string && data.destinationCity.size() >= 2 && data.destinationCity.size() <= 140 &&
+             data.customerCarePhone is string && data.customerCarePhone.size() >= 10 && data.customerCarePhone.size() <= 16 &&
+             data.verificationStatus in ['ACCEPTED', 'PENDING_VERIFICATION', 'VERIFIED', 'BOOKED', 'CANCELLED'] &&
+             data.createdAt is timestamp &&
+             isValidTimestampBound(data.updatedAt);
+    }
+
+    function isValidAppNotification(data) {
+      return data.recipientUid is string && data.recipientUid.size() >= 1 && data.recipientUid.size() <= 128 &&
+             data.senderUid is string && data.senderUid.size() >= 1 && data.senderUid.size() <= 128 &&
+             data.title is string && data.title.size() >= 2 && data.title.size() <= 120 &&
+             data.message is string && data.message.size() >= 2 && data.message.size() <= 500 &&
+             data.type in ['NEW_BID', 'BID_ACCEPTED', 'LOAD_STATUS_CHANGED', 'LOAD_EXPIRED', 'SYSTEM', 'MATCHING_LOAD'] &&
+             data.loadId is string && data.loadId.size() >= 1 && data.loadId.size() <= 128 &&
+             (!('bidId' in data) || data.bidId == null || (data.bidId is string && data.bidId.size() <= 128)) &&
+             (!('unlockedPhone' in data) || data.unlockedPhone == null || isValidDirectPhone(data.unlockedPhone)) &&
+             (!('unlockedPickupAddress' in data) || data.unlockedPickupAddress == null || (data.unlockedPickupAddress is string && data.unlockedPickupAddress.size() <= 300)) &&
+             (!('unlockedVehicleNumber' in data) || data.unlockedVehicleNumber == null || (data.unlockedVehicleNumber is string && data.unlockedVehicleNumber.size() <= 25)) &&
+             data.isRead is bool &&
+             data.createdAt is timestamp &&
+             isValidTimestampBound(data.updatedAt);
+    }
+
+    // --- 1. User Role Profile (/users/{userId}) ---
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow list: if isSignedIn() && existing().userId == request.auth.uid;
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll(['userId', 'role', 'displayName', 'kycVerified', 'rating', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'role', 'displayName', 'kycVerified', 'rating',
+                         'vehicleNumberMasked', 'vehicleSizeFeet', 'vehicleCapacityTons',
+                         'vehicleBodyType', 'isAvailable', 'currentCity', 'currentLat', 'currentLng',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidTimestampBound(incoming().createdAt) &&
+                       isValidUserRoleProfile(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       isValidUserRoleProfile(incoming()) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'role', 'displayName', 'kycVerified', 'rating',
+                         'vehicleNumberMasked', 'vehicleSizeFeet', 'vehicleCapacityTons',
+                         'vehicleBodyType', 'isAvailable', 'currentCity', 'currentLat', 'currentLng',
+                         'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+
+      // --- 2. Strict PII KYC Subcollection (/users/{userId}/private_kyc/{docId}) ---
+      match /private_kyc/{docId} {
+        allow get: if isSignedIn() && isValidId(userId) && isValidId(docId) && request.auth.uid == userId;
+        allow list: if false;
+
+        allow create: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(docId) &&
+                         request.auth.uid == userId &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().keys().hasAll(['userId', 'fullName', 'phoneNumber', 'maskedPhone', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'fullName', 'phoneNumber', 'maskedPhone',
+                           'drivingLicenseNumber', 'panNumber', 'aadhaarRedacted', 'vehicleNumberFull',
+                           'selfieVerifiedAt', 'leftEyeOpenProb', 'rightEyeOpenProb',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidTimestampBound(incoming().createdAt) &&
+                         isValidUserPrivateKyc(incoming());
+
+        allow update: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(docId) &&
+                         isValidUserPrivateKyc(incoming()) &&
+                         request.auth.uid == userId &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'fullName', 'phoneNumber', 'maskedPhone',
+                           'drivingLicenseNumber', 'panNumber', 'aadhaarRedacted', 'vehicleNumberFull',
+                           'selfieVerifiedAt', 'leftEyeOpenProb', 'rightEyeOpenProb',
+                           'updatedAt'
+                         ]);
+
+        allow delete: if isSignedIn() && isValidId(userId) && isValidId(docId) && request.auth.uid == userId;
+      }
+
+      // --- 2b. Driver Fleet Vehicles Subcollection (/users/{userId}/fleet/{vehicleId}) ---
+      match /fleet/{vehicleId} {
+        allow get, list: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+
+        allow create, update: if isSignedIn() &&
+                                 isValidId(userId) &&
+                                 isValidId(vehicleId) &&
+                                 request.auth.uid == userId &&
+                                 incoming().userId == request.auth.uid &&
+                                 incoming().vehicleSizeFeet is int &&
+                                 incoming().vehicleSizeFeet >= 6 && incoming().vehicleSizeFeet <= 80 &&
+                                 incoming().vehicleBodyType in ['OPEN', 'CONTAINER'] &&
+                                 incoming().vehicleCity is string && incoming().vehicleCity.size() >= 2 && incoming().vehicleCity.size() <= 120 &&
+                                 isValidTimestampBound(incoming().createdAt) &&
+                                 isValidTimestampBound(incoming().updatedAt);
+
+        allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      }
+    }
+
+    // --- 3. Marketplace Freight Load Posts (/loads/{loadId}) ---
+    match /loads/{loadId} {
+      allow get: if isSignedIn() && isValidId(loadId) && (
+        existing().status in ['ACTIVE', 'ACCEPTED', 'BOOKED', 'CANCELLED'] ||
+        existing().posterId == request.auth.uid ||
+        ('winningDriverId' in existing() && existing().winningDriverId == request.auth.uid) ||
+        ('acceptedDriverIds' in existing() && existing().acceptedDriverIds is list && request.auth.uid in existing().acceptedDriverIds)
+      );
+
+      allow list: if isSignedIn() && (
+        existing().status in ['ACTIVE', 'ACCEPTED'] ||
+        existing().posterId == request.auth.uid ||
+        ('winningDriverId' in existing() && existing().winningDriverId == request.auth.uid) ||
+        ('acceptedDriverIds' in existing() && existing().acceptedDriverIds is list && request.auth.uid in existing().acceptedDriverIds)
+      );
+
+      allow create: if isSignedIn() &&
+                       isValidId(loadId) &&
+                       incoming().posterId == request.auth.uid &&
+                       incoming().status == 'ACTIVE' &&
+                       incoming().bidCount == 0 &&
+                       !('acceptedBidId' in incoming() && incoming().acceptedBidId != null && incoming().acceptedBidId != '') &&
+                       !('winningDriverId' in incoming() && incoming().winningDriverId != null && incoming().winningDriverId != '') &&
+                       (!('acceptedBidIds' in incoming()) || incoming().acceptedBidIds == null || incoming().acceptedBidIds.size() == 0) &&
+                       (!('acceptedDriverIds' in incoming()) || incoming().acceptedDriverIds == null || incoming().acceptedDriverIds.size() == 0) &&
+                       incoming().keys().hasAll([
+                         'posterId', 'posterCompanyName', 'maskedPosterPhone',
+                         'originCity', 'originLat', 'originLng',
+                         'destinationCity', 'destLat', 'destLng',
+                         'loadingWaypoints', 'requiredSizeFeet', 'requiredTonnage', 'requiredBodyType',
+                         'materialType', 'loadingDate', 'loadingTime',
+                         'status', 'bidCount', 'expiresAtEpochMillis', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'posterId', 'posterCompanyName', 'maskedPosterPhone',
+                         'originCity', 'originAddress', 'originLat', 'originLng',
+                         'destinationCity', 'destinationAddress', 'destLat', 'destLng',
+                         'totalDistanceKm', 'loadingWaypoints', 'requiredSizeFeet', 'requiredTonnage',
+                         'requiredBodyType', 'materialType', 'loadingDate', 'loadingTime',
+                         'expectedBudgetInr', 'status', 'acceptedBidId', 'winningDriverId',
+                         'acceptedBidIds', 'acceptedDriverIds',
+                         'bidCount', 'lowestBidAmount', 'expiresAtEpochMillis', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidTimestampBound(incoming().createdAt) &&
+                       isValidLoadPost(incoming()) &&
+                       existsAfter(/databases/$(database)/documents/loads/$(loadId)/vault/contact);
+
+      allow update: if isSignedIn() &&
+                       isValidId(loadId) &&
+                       isValidTimestampBound(incoming().updatedAt) && (
+                         // Action 1: Poster accepts up to 3 top bids while load is ACTIVE or ACCEPTED
+                         (existing().posterId == request.auth.uid &&
+                          existing().status in ['ACTIVE', 'ACCEPTED'] &&
+                          incoming().status == 'ACCEPTED' &&
+                          incoming().acceptedBidIds is list && incoming().acceptedBidIds.size() >= 1 && isValidBoundedIdList(incoming().acceptedBidIds) &&
+                          incoming().acceptedBidId in incoming().acceptedBidIds &&
+                          incoming().acceptedDriverIds is list && incoming().acceptedDriverIds.size() >= 1 && isValidBoundedIdList(incoming().acceptedDriverIds) &&
+                          incoming().winningDriverId in incoming().acceptedDriverIds &&
+                          incoming().diff(existing()).affectedKeys().hasOnly([
+                            'status', 'acceptedBidId', 'winningDriverId',
+                            'acceptedBidIds', 'acceptedDriverIds', 'updatedAt'
+                          ]) &&
+                          getAfter(/databases/$(database)/documents/loads/$(loadId)/bids/$(incoming().acceptedBidId)).data.status == 'ACCEPTED' &&
+                          getAfter(/databases/$(database)/documents/loads/$(loadId)/bid_contacts/$(incoming().acceptedBidId)).data.unlockedForPoster == true
+                         ) ||
+                         // Action 2: Driver places a new bid while load is ACTIVE or ACCEPTED (before BOOKED/CANCELLED)
+                         (existing().posterId != request.auth.uid &&
+                          existing().status in ['ACTIVE', 'ACCEPTED'] &&
+                          incoming().bidCount == existing().bidCount + 1 &&
+                          (incoming().lowestBidAmount is int || incoming().lowestBidAmount is float) &&
+                          incoming().lowestBidAmount > 0 &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['bidCount', 'lowestBidAmount', 'updatedAt'])
+                         ) ||
+                         // Action 3: Poster marks load as BOOKED or CANCELLED (or EXPIRED)
+                         (existing().posterId == request.auth.uid &&
+                          existing().status in ['ACTIVE', 'ACCEPTED'] &&
+                          incoming().status in ['BOOKED', 'CANCELLED', 'EXPIRED'] &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+                         )
+                       );
+
+      allow delete: if isSignedIn() && isValidId(notificationId) && existing().recipientUid == request.auth.uid;
+
+      // --- 4. Isolated Poster Contact Vault (/loads/{loadId}/vault/{vaultId}) ---
+      // Readable by posterId AND by up to 3 accepted drivers in authorizedDriverIds.
+      match /vault/{vaultId} {
+        allow get: if isSignedIn() && isValidId(loadId) && vaultId == 'contact' && (
+          existing().posterId == request.auth.uid ||
+          ('authorizedDriverId' in existing() && existing().authorizedDriverId == request.auth.uid) ||
+          ('authorizedDriverIds' in existing() && existing().authorizedDriverIds is list && request.auth.uid in existing().authorizedDriverIds)
+        );
+        allow list: if false;
+
+        allow create: if isSignedIn() &&
+                         isValidId(loadId) &&
+                         vaultId == 'contact' &&
+                         incoming().posterId == request.auth.uid &&
+                         !('authorizedDriverId' in incoming() && incoming().authorizedDriverId != null && incoming().authorizedDriverId != '') &&
+                         (!('authorizedDriverIds' in incoming()) || incoming().authorizedDriverIds == null || incoming().authorizedDriverIds.size() == 0) &&
+                         incoming().keys().hasAll(['loadId', 'posterId', 'posterDirectPhone', 'exactPickupAddress', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly([
+                           'loadId', 'posterId', 'posterDirectPhone', 'exactPickupAddress',
+                           'authorizedDriverId', 'authorizedDriverIds', 'winningDriverDirectPhone',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidTimestampBound(incoming().createdAt) &&
+                         isValidLoadContactVault(incoming(), loadId) &&
+                         getAfter(/databases/$(database)/documents/loads/$(loadId)).data.posterId == request.auth.uid;
+
+        allow update: if isSignedIn() &&
+                         isValidId(loadId) &&
+                         vaultId == 'contact' &&
+                         isValidLoadContactVault(incoming(), loadId) &&
+                         existing().posterId == request.auth.uid &&
+                         incoming().posterId == existing().posterId &&
+                         incoming().loadId == existing().loadId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().posterDirectPhone == existing().posterDirectPhone &&
+                         incoming().exactPickupAddress == existing().exactPickupAddress &&
+                         'authorizedDriverId' in incoming() && isValidId(incoming().authorizedDriverId) &&
+                         'authorizedDriverIds' in incoming() && isValidBoundedIdList(incoming().authorizedDriverIds) &&
+                         incoming().authorizedDriverIds.size() >= 1 &&
+                         incoming().authorizedDriverId in incoming().authorizedDriverIds &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'authorizedDriverId', 'authorizedDriverIds', 'winningDriverDirectPhone', 'updatedAt'
+                         ]) &&
+                         getAfter(/databases/$(database)/documents/loads/$(loadId)).data.status == 'ACCEPTED';
+
+        allow delete: if false;
+      }
+
+      // --- 5. Ranked Competitive Bids (/loads/{loadId}/bids/{bidId}) ---
+      match /bids/{bidId} {
+        allow get: if isSignedIn() && isValidId(loadId) && isValidId(bidId) && (
+          existing().posterId == request.auth.uid ||
+          existing().driverId == request.auth.uid ||
+          existing().status in ['PENDING', 'ACCEPTED']
+        );
+
+        allow list: if isSignedIn() && (
+          existing().posterId == request.auth.uid ||
+          existing().driverId == request.auth.uid ||
+          existing().status in ['PENDING', 'ACCEPTED']
+        );
+
+        allow create: if isSignedIn() &&
+                         isValidId(loadId) &&
+                         isValidId(bidId) &&
+                         incoming().driverId == request.auth.uid &&
+                         incoming().posterId != request.auth.uid &&
+                         incoming().status == 'PENDING' &&
+                         incoming().keys().hasAll([
+                           'loadId', 'posterId', 'driverId', 'driverAnonymousAlias',
+                           'driverDisplayName', 'maskedDriverPhone', 'driverRating',
+                           'vehicleDetails', 'maskedVehicleNumber', 'bidAmount',
+                           'availabilityTime', 'status', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'loadId', 'posterId', 'driverId', 'driverAnonymousAlias',
+                           'driverDisplayName', 'maskedDriverPhone', 'driverRating',
+                           'vehicleDetails', 'maskedVehicleNumber', 'bidAmount',
+                           'availabilityTime', 'status', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidTimestampBound(incoming().createdAt) &&
+                         isValidBid(incoming(), loadId) &&
+                         getAfter(/databases/$(database)/documents/loads/$(loadId)).data.status in ['ACTIVE', 'ACCEPTED'] &&
+                         getAfter(/databases/$(database)/documents/loads/$(loadId)).data.posterId == incoming().posterId &&
+                         existsAfter(/databases/$(database)/documents/loads/$(loadId)/bid_contacts/$(bidId));
+
+        allow update: if isSignedIn() &&
+                         isValidId(loadId) &&
+                         isValidId(bidId) &&
+                         isValidBid(incoming(), loadId) &&
+                         existing().status == 'PENDING' &&
+                         incoming().loadId == existing().loadId &&
+                         incoming().posterId == existing().posterId &&
+                         incoming().driverId == existing().driverId &&
+                         incoming().createdAt == existing().createdAt && (
+                           // Action 1: Poster atomically accepts this bid (up to 3 top bids)
+                           (existing().posterId == request.auth.uid &&
+                            incoming().status == 'ACCEPTED' &&
+                            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) &&
+                            getAfter(/databases/$(database)/documents/loads/$(loadId)).data.status == 'ACCEPTED' &&
+                            bidId in getAfter(/databases/$(database)/documents/loads/$(loadId)).data.acceptedBidIds
+                           ) ||
+                           // Action 2: Driver revises own pending bid amount/availability while load is ACTIVE or ACCEPTED
+                           (existing().driverId == request.auth.uid &&
+                            incoming().status == 'PENDING' &&
+                            incoming().diff(existing()).affectedKeys().hasOnly(['bidAmount', 'availabilityTime', 'updatedAt']) &&
+                            getAfter(/databases/$(database)/documents/loads/$(loadId)).data.status in ['ACTIVE', 'ACCEPTED']
+                           )
+                         );
+
+        allow delete: if false;
+      }
+
+      // --- 6. Isolated Driver Bid Private Contact (/loads/{loadId}/bid_contacts/{bidId}) ---
+      // Readable by driverId always, and by posterId ONLY once unlockedForPoster == true (bid accepted).
+      match /bid_contacts/{bidId} {
+        allow get: if isSignedIn() && isValidId(loadId) && isValidId(bidId) && (
+          existing().driverId == request.auth.uid ||
+          (existing().posterId == request.auth.uid && existing().unlockedForPoster == true)
+        );
+        allow list: if isSignedIn() && (
+          existing().driverId == request.auth.uid ||
+          (existing().posterId == request.auth.uid && existing().unlockedForPoster == true)
+        );
+
+        allow create: if isSignedIn() &&
+                         isValidId(loadId) &&
+                         isValidId(bidId) &&
+                         incoming().driverId == request.auth.uid &&
+                         incoming().unlockedForPoster == false &&
+                         incoming().keys().hasAll([
+                           'bidId', 'loadId', 'driverId', 'posterId',
+                           'driverDirectPhone', 'fullVehicleNumber', 'driverFullName',
+                           'unlockedForPoster', 'createdAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'bidId', 'loadId', 'driverId', 'posterId',
+                           'driverDirectPhone', 'fullVehicleNumber', 'driverFullName',
+                           'bidAmount', 'unlockedForPoster', 'updatedAt', 'createdAt'
+                         ]) &&
+                         isValidBidPrivateContact(incoming(), loadId, bidId) &&
+                         getAfter(/databases/$(database)/documents/loads/$(loadId)/bids/$(bidId)).data.driverId == request.auth.uid;
+
+        allow update: if isSignedIn() &&
+                         isValidId(loadId) &&
+                         isValidId(bidId) &&
+                         isValidBidPrivateContact(incoming(), loadId, bidId) &&
+                         existing().posterId == request.auth.uid &&
+                         existing().unlockedForPoster == false &&
+                         incoming().unlockedForPoster == true &&
+                         incoming().bidId == existing().bidId &&
+                         incoming().loadId == existing().loadId &&
+                         incoming().driverId == existing().driverId &&
+                         incoming().posterId == existing().posterId &&
+                         incoming().driverDirectPhone == existing().driverDirectPhone &&
+                         incoming().fullVehicleNumber == existing().fullVehicleNumber &&
+                         incoming().driverFullName == existing().driverFullName &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['unlockedForPoster', 'updatedAt']) &&
+                         getAfter(/databases/$(database)/documents/loads/$(loadId)/bids/$(bidId)).data.status == 'ACCEPTED';
+
+        allow delete: if false;
+      }
+    }
+
+    // --- 7. Driver My Trips Collection (/driver_trips/{tripId}) ---
+    // Tracks every load where a driver placed a bid, unlocked poster phone when accepted, and BOOKED/CANCELLED load status.
+    match /driver_trips/{tripId} {
+      allow get: if isSignedIn() && isValidId(tripId) && (
+        resource == null ||
+        existing().driverId == request.auth.uid ||
+        existing().posterId == request.auth.uid
+      );
+
+      allow list: if isSignedIn() && (
+        existing().driverId == request.auth.uid ||
+        existing().posterId == request.auth.uid
+      );
+
+      allow create: if isSignedIn() &&
+                       isValidId(tripId) &&
+                       incoming().driverId == request.auth.uid &&
+                       incoming().posterId != request.auth.uid &&
+                       incoming().bidStatus == 'PENDING' &&
+                       (!('unlockedPosterPhone' in incoming()) || incoming().unlockedPosterPhone == null) &&
+                       incoming().keys().hasAll([
+                         'tripId', 'loadId', 'bidId', 'posterId', 'posterCompanyName',
+                         'driverId', 'driverDisplayName', 'originCity', 'destinationCity',
+                         'totalDistanceKm', 'requiredSizeFeet', 'requiredTonnage',
+                         'requiredBodyType', 'materialType', 'bidAmount',
+                         'bidStatus', 'loadStatus', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'tripId', 'loadId', 'bidId', 'posterId', 'posterCompanyName',
+                         'driverId', 'driverDisplayName', 'originCity', 'destinationCity',
+                         'totalDistanceKm', 'requiredSizeFeet', 'requiredTonnage',
+                         'requiredBodyType', 'materialType', 'bidAmount',
+                         'bidStatus', 'loadStatus', 'unlockedPosterPhone', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidTimestampBound(incoming().createdAt) &&
+                       isValidDriverTripEntry(incoming(), tripId) &&
+                       existsAfter(/databases/$(database)/documents/loads/$(incoming().loadId)/bids/$(incoming().bidId));
+
+      allow update: if isSignedIn() &&
+                       isValidTimestampBound(incoming().updatedAt) && (
+                         // Action 1: Driver places an updated bid on the same load while load is still ACTIVE/ACCEPTED
+                         (existing().driverId == request.auth.uid &&
+                          existing().loadStatus in ['ACTIVE', 'ACCEPTED'] &&
+                          (incoming().bidAmount is int || incoming().bidAmount is float) && incoming().bidAmount > 0 &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['bidId', 'bidAmount', 'updatedAt'])
+                         ) ||
+                         // Action 2: Load Poster accepts this driver's bid and unlocks poster's direct phone, OR updates loadStatus to ACCEPTED / BOOKED / CANCELLED
+                         (existing().posterId == request.auth.uid &&
+                          incoming().diff(existing()).affectedKeys().hasOnly([
+                            'bidStatus', 'loadStatus', 'unlockedPosterPhone', 'updatedAt'
+                          ]) && (
+                            (incoming().bidStatus == 'ACCEPTED' &&
+                             incoming().loadStatus == 'ACCEPTED' &&
+                             isValidDirectPhone(incoming().unlockedPosterPhone) &&
+                             getAfter(/databases/$(database)/documents/loads/$(existing().loadId)).data.status == 'ACCEPTED') ||
+                            (incoming().bidStatus == existing().bidStatus &&
+                             incoming().loadStatus in ['ACCEPTED', 'BOOKED', 'CANCELLED'] &&
+                             getAfter(/databases/$(database)/documents/loads/$(existing().loadId)).data.status == incoming().loadStatus)
+                          )
+                         )
+                       );
+
+      allow delete: if false;
+    }
+
+    // --- 8. Top-Level Bid Phone Records (/bid_phone_records/{bidId}) ---
+    match /bid_phone_records/{bidId} {
+      allow get: if isSignedIn() && isValidId(bidId) && existing().driverId == request.auth.uid;
+      allow list: if false;
+
+      allow create: if isSignedIn() &&
+                       isValidId(bidId) &&
+                       incoming().driverId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'bidId', 'loadId', 'posterId', 'driverId',
+                         'driverFullName', 'driverFullPhone', 'bidAmount',
+                         'originCity', 'destinationCity', 'createdAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'bidId', 'loadId', 'posterId', 'driverId',
+                         'driverFullName', 'driverFullPhone', 'bidAmount',
+                         'originCity', 'destinationCity', 'createdAt'
+                       ]) &&
+                       isValidBidPhoneRecord(incoming(), bidId) &&
+                       existsAfter(/databases/$(database)/documents/loads/$(incoming().loadId)/bids/$(bidId));
+
+      allow update, delete: if false;
+    }
+
+    // --- 9. Top-Level Accepted Deal Records (/accepted_deals/{dealId}) ---
+    match /accepted_deals/{dealId} {
+      allow get: if isSignedIn() && isValidId(dealId) && (
+        existing().posterId == request.auth.uid ||
+        existing().winningDriverId == request.auth.uid
+      );
+      allow list: if false;
+
+      allow create: if isSignedIn() &&
+                       isValidId(dealId) &&
+                       incoming().posterId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'loadId', 'acceptedBidId', 'posterId', 'posterCompanyName',
+                         'posterFullPhone', 'winningDriverId', 'winningDriverName',
+                         'acceptedBidAmount', 'originCity', 'destinationCity',
+                         'customerCarePhone', 'verificationStatus', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'dealId', 'loadId', 'acceptedBidId', 'posterId', 'posterCompanyName',
+                         'posterFullPhone', 'winningDriverId', 'winningDriverName', 'driverFullPhone',
+                         'acceptedBidAmount', 'originCity', 'destinationCity',
+                         'customerCarePhone', 'verificationStatus', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidTimestampBound(incoming().createdAt) &&
+                       isValidAcceptedDealRecord(incoming(), dealId) &&
+                       getAfter(/databases/$(database)/documents/loads/$(incoming().loadId)).data.status == 'ACCEPTED' &&
+                       getAfter(/databases/$(database)/documents/loads/$(incoming().loadId)).data.posterId == request.auth.uid;
+
+      allow update, delete: if false;
+    }
+
+    // --- 10. Real-Time User Notifications (/notifications/{notificationId}) ---
+    match /notifications/{notificationId} {
+      allow get: if isSignedIn() && isValidId(notificationId) && existing().recipientUid == request.auth.uid;
+      allow list: if isSignedIn() && existing().recipientUid == request.auth.uid;
+
+      allow create: if isSignedIn() &&
+                       isValidId(notificationId) &&
+                       incoming().senderUid == request.auth.uid &&
+                       incoming().isRead == false &&
+                       incoming().keys().hasAll([
+                         'recipientUid', 'senderUid', 'title', 'message',
+                         'type', 'loadId', 'isRead', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'recipientUid', 'senderUid', 'title', 'message',
+                         'type', 'loadId', 'bidId', 'unlockedPhone',
+                         'unlockedPickupAddress', 'unlockedVehicleNumber',
+                         'isRead', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidTimestampBound(incoming().createdAt) &&
+                       isValidAppNotification(incoming()) &&
+                       (incoming().recipientUid == request.auth.uid || (
+                         incoming().type == 'NEW_BID' &&
+                         getAfter(/databases/$(database)/documents/loads/$(incoming().loadId)).data.posterId == incoming().recipientUid
+                       ) || (
+                         incoming().type == 'BID_ACCEPTED' &&
+                         getAfter(/databases/$(database)/documents/loads/$(incoming().loadId)).data.posterId == request.auth.uid &&
+                         incoming().recipientUid in getAfter(/databases/$(database)/documents/loads/$(incoming().loadId)).data.acceptedDriverIds &&
+                         getAfter(/databases/$(database)/documents/loads/$(incoming().loadId)).data.status == 'ACCEPTED'
+                       ) || (
+                         incoming().type == 'LOAD_STATUS_CHANGED' &&
+                         getAfter(/databases/$(database)/documents/loads/$(incoming().loadId)).data.posterId == request.auth.uid &&
+                         getAfter(/databases/$(database)/documents/loads/$(incoming().loadId)).data.status in ['BOOKED', 'CANCELLED']
+                       ) || (
+                         incoming().type == 'MATCHING_LOAD'
+                       ));
+
+      allow update: if isSignedIn() &&
+                       isValidId(notificationId) &&
+                       isValidAppNotification(incoming()) &&
+                       existing().recipientUid == request.auth.uid &&
+                       incoming().recipientUid == existing().recipientUid &&
+                       incoming().senderUid == existing().senderUid &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().isRead == true &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['isRead', 'updatedAt']);
+
+      allow delete: if false;
+    }
+  }
+}

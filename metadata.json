@@ -1,0 +1,6 @@
+{
+  "name": "Verified Trucks",
+  "description": "Android freight logistics marketplace with live KYC selfie verification, 250km load matching, blind competitive bidding, number masking, and atomic Firestore acceptance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

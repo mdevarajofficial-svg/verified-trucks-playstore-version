@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Verified Trucks</string>
+    <string name="tagline">🚛 Pan-India Commercial Freight &amp; Fleet Exchange</string>
+    <string name="sign_in_with_google">Continue with Google</string>
+    <string name="role_poster_title">🏢 Load Poster / Transporter</string>
+    <string name="role_poster_subtitle">Post loads across India, review competitive bids, and book verified trucks quickly.</string>
+    <string name="role_driver_title">🚛 Vehicle Owner / Driver</string>
+    <string name="role_driver_subtitle">Browse all live loads across the market, filter as needed, and place competitive bids.</string>
+    <string name="bid_confirmed_banner">✅ Bid Accepted! Direct contact details unlocked.</string>
+    <string name="highlight_1_title">🇮🇳 Pan India Logistics Hub</string>
+    <string name="highlight_2_title">⚡ Fastest Vehicle Placement</string>
+    <string name="highlight_3_title">💰 Transparent Pricing</string>
+</resources>

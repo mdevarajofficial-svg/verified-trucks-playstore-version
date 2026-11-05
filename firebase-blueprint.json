@@ -1,0 +1,400 @@
+{
+  "entities": {
+    "UserRoleProfile": {
+      "title": "User Role Profile",
+      "description": "Public operational role and non-PII summary for a Verified Trucks user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the user." },
+        "role": { "type": "string", "enum": ["POSTER", "DRIVER"], "description": "Selected operational role." },
+        "displayName": { "type": "string", "description": "Public display or company name." },
+        "kycVerified": { "type": "boolean", "description": "Whether onboarding profile setup succeeded." },
+        "rating": { "type": "number", "description": "Driver or Transporter rating from 1.0 to 5.0." },
+        "vehicleNumberMasked": { "type": "string", "description": "Masked or summary vehicle plate for leaderboard." },
+        "vehicleSizeFeet": { "type": "integer", "description": "Driver truck length in feet (e.g. 8, 9, 10, 14, 17, 20, 22, 24, 32, 40)." },
+        "vehicleCapacityTons": { "type": "number", "description": "Driver truck capacity in tons." },
+        "vehicleBodyType": { "type": "string", "enum": ["OPEN", "CONTAINER"], "description": "Truck body type." },
+        "isAvailable": { "type": "boolean", "description": "Driver current availability status." },
+        "currentCity": { "type": "string", "description": "Driver current captured location name." },
+        "currentLat": { "type": "number", "description": "Driver current latitude." },
+        "currentLng": { "type": "number", "description": "Driver current longitude." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp via FieldValue.serverTimestamp()." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp via FieldValue.serverTimestamp()." }
+      },
+      "required": ["userId", "role", "displayName", "kycVerified", "rating", "createdAt", "updatedAt"]
+    },
+    "UserPrivateKyc": {
+      "title": "User Private KYC & Contact Info",
+      "description": "Strictly isolated PII document readable, writable, and deletable ONLY by the owning user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID." },
+        "fullName": { "type": "string", "description": "Legal full name." },
+        "phoneNumber": { "type": "string", "description": "Direct phone number (unmasked, private to owner)." },
+        "maskedPhone": { "type": "string", "description": "Masked format XXXXXX1234." },
+        "drivingLicenseNumber": { "type": "string", "description": "Driving License Number." },
+        "panNumber": { "type": "string", "description": "PAN Number." },
+        "aadhaarRedacted": { "type": "string", "description": "Redacted Aadhaar token." },
+        "vehicleNumberFull": { "type": "string", "description": "Full vehicle registration number." },
+        "selfieVerifiedAt": { "type": "string", "format": "date-time", "description": "Optional verification timestamp." },
+        "leftEyeOpenProb": { "type": "number", "description": "Optional verification metric." },
+        "rightEyeOpenProb": { "type": "number", "description": "Optional verification metric." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp via FieldValue.serverTimestamp()." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp via FieldValue.serverTimestamp()." }
+      },
+      "required": ["userId", "fullName", "phoneNumber", "maskedPhone", "createdAt", "updatedAt"]
+    },
+    "LoadPost": {
+      "title": "Freight Load Post",
+      "description": "Public marketplace freight load post supporting up to 3 accepted top bids and BOOKED / CANCELLED lifecycle.",
+      "type": "object",
+      "properties": {
+        "posterId": { "type": "string", "description": "UID of the Load Poster." },
+        "posterCompanyName": { "type": "string", "description": "Company or transporter name." },
+        "maskedPosterPhone": { "type": "string", "description": "Strictly masked phone XXXXXX1234." },
+        "originCity": { "type": "string", "description": "Origin city / loading location." },
+        "originAddress": { "type": "string", "description": "Optional full formatted Mappls origin address." },
+        "originLat": { "type": "number", "description": "Origin latitude." },
+        "originLng": { "type": "number", "description": "Origin longitude." },
+        "destinationCity": { "type": "string", "description": "Destination city / unloading location." },
+        "destinationAddress": { "type": "string", "description": "Optional full formatted Mappls destination address." },
+        "destLat": { "type": "number", "description": "Destination latitude." },
+        "destLng": { "type": "number", "description": "Destination longitude." },
+        "totalDistanceKm": { "type": "number", "description": "Auto-calculated route distance in kilometers." },
+        "loadingWaypoints": { "type": "array", "description": "Bounded list (max 8) kept for schema backward compatibility." },
+        "requiredSizeFeet": { "type": "integer", "description": "Required vehicle length in feet." },
+        "requiredTonnage": { "type": "number", "description": "Required payload capacity in tons." },
+        "requiredBodyType": { "type": "string", "enum": ["OPEN", "CONTAINER"], "description": "Required truck body type." },
+        "materialType": { "type": "string", "description": "Cargo material type." },
+        "loadingDate": { "type": "string", "description": "Scheduled loading date string." },
+        "loadingTime": { "type": "string", "description": "Scheduled loading time string." },
+        "expectedBudgetInr": { "type": "number", "description": "Optional indicative freight budget." },
+        "status": { "type": "string", "enum": ["ACTIVE", "ACCEPTED", "BOOKED", "CANCELLED", "EXPIRED"], "description": "Marketplace status." },
+        "acceptedBidId": { "type": "string", "description": "Latest or primary accepted bid ID." },
+        "winningDriverId": { "type": "string", "description": "Latest or primary accepted driver UID." },
+        "acceptedBidIds": { "type": "array", "description": "Bounded list (max 3) of accepted bid IDs." },
+        "acceptedDriverIds": { "type": "array", "description": "Bounded list (max 3) of accepted driver UIDs." },
+        "bidCount": { "type": "integer", "description": "Count of bids placed." },
+        "lowestBidAmount": { "type": "number", "description": "Lowest bid amount in INR for quick display." },
+        "expiresAtEpochMillis": { "type": "integer", "description": "Backend expiry epoch timestamp in milliseconds." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp via FieldValue.serverTimestamp()." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp via FieldValue.serverTimestamp()." }
+      },
+      "required": [
+        "posterId",
+        "posterCompanyName",
+        "maskedPosterPhone",
+        "originCity",
+        "originLat",
+        "originLng",
+        "destinationCity",
+        "destLat",
+        "destLng",
+        "loadingWaypoints",
+        "requiredSizeFeet",
+        "requiredTonnage",
+        "requiredBodyType",
+        "materialType",
+        "loadingDate",
+        "loadingTime",
+        "status",
+        "bidCount",
+        "expiresAtEpochMillis",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "LoadContactVault": {
+      "title": "Load Poster Private Contact Vault",
+      "description": "Isolated PII vault storing unmasked poster phone and pickup address. Readable by posterId and up to 3 accepted drivers in authorizedDriverIds.",
+      "type": "object",
+      "properties": {
+        "loadId": { "type": "string", "description": "Load ID matching parent load." },
+        "posterId": { "type": "string", "description": "Poster UID." },
+        "posterDirectPhone": { "type": "string", "description": "Original unmasked direct phone number of Poster." },
+        "exactPickupAddress": { "type": "string", "description": "Captured origin pickup location address." },
+        "authorizedDriverId": { "type": "string", "description": "Primary/latest accepted driver UID." },
+        "authorizedDriverIds": { "type": "array", "description": "Bounded list (max 3) of accepted driver UIDs unlocked to read Poster contact." },
+        "winningDriverDirectPhone": { "type": "string", "description": "Optional backend field." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp via FieldValue.serverTimestamp()." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp via FieldValue.serverTimestamp()." }
+      },
+      "required": ["loadId", "posterId", "posterDirectPhone", "exactPickupAddress", "createdAt", "updatedAt"]
+    },
+    "Bid": {
+      "title": "Competitive Blind Bid",
+      "description": "Leaderboard bid document sorted lowest amount first, with strictly masked phone.",
+      "type": "object",
+      "properties": {
+        "loadId": { "type": "string", "description": "ID of the LoadPost." },
+        "posterId": { "type": "string", "description": "UID of the LoadPoster." },
+        "driverId": { "type": "string", "description": "UID of the bidding Driver." },
+        "driverAnonymousAlias": { "type": "string", "description": "Anonymous handle for competing drivers." },
+        "driverDisplayName": { "type": "string", "description": "Driver/Operator name for Poster leaderboard." },
+        "maskedDriverPhone": { "type": "string", "description": "Strictly masked phone XXXXXX1234." },
+        "driverRating": { "type": "number", "description": "Driver rating (1.0 - 5.0)." },
+        "vehicleDetails": { "type": "string", "description": "e.g. 32ft CONTAINER" },
+        "maskedVehicleNumber": { "type": "string", "description": "Masked plate during bidding." },
+        "bidAmount": { "type": "number", "description": "Bid freight rate in INR." },
+        "availabilityTime": { "type": "string", "description": "Driver availability status." },
+        "status": { "type": "string", "enum": ["PENDING", "ACCEPTED", "REJECTED"], "description": "Bid status." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp via FieldValue.serverTimestamp()." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp via FieldValue.serverTimestamp()." }
+      },
+      "required": [
+        "loadId",
+        "posterId",
+        "driverId",
+        "driverAnonymousAlias",
+        "driverDisplayName",
+        "maskedDriverPhone",
+        "driverRating",
+        "vehicleDetails",
+        "maskedVehicleNumber",
+        "bidAmount",
+        "availabilityTime",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "BidPrivateContact": {
+      "title": "Driver Bid Private Contact",
+      "description": "Isolated PII document holding original unmasked driver phone entered while placing bid. Readable by driverId and by posterId once unlockedForPoster == true.",
+      "type": "object",
+      "properties": {
+        "bidId": { "type": "string", "description": "Matching Bid ID." },
+        "loadId": { "type": "string", "description": "Matching Load ID." },
+        "driverId": { "type": "string", "description": "Driver UID." },
+        "posterId": { "type": "string", "description": "Poster UID." },
+        "driverDirectPhone": { "type": "string", "description": "Original unmasked driver contact number entered during bid placement." },
+        "fullVehicleNumber": { "type": "string", "description": "Vehicle registration plate." },
+        "driverFullName": { "type": "string", "description": "Full verified name of driver." },
+        "bidAmount": { "type": "number", "description": "Bid freight amount in INR." },
+        "unlockedForPoster": { "type": "boolean", "description": "Set to true atomically when Load Poster accepts this bid." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Optional server timestamp when unlocked." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp via FieldValue.serverTimestamp()." }
+      },
+      "required": [
+        "bidId",
+        "loadId",
+        "driverId",
+        "posterId",
+        "driverDirectPhone",
+        "fullVehicleNumber",
+        "driverFullName",
+        "unlockedForPoster",
+        "createdAt"
+      ]
+    },
+    "DriverTripEntry": {
+      "title": "Driver My Trips Bid & Load Status Entry",
+      "description": "Tracks every load on which a Vehicle Owner/Driver placed a bid so My Trips reflects PENDING/ACCEPTED bid status, unlocked Load Poster phone when accepted, and real-time BOOKED/CANCELLED load status.",
+      "type": "object",
+      "properties": {
+        "tripId": { "type": "string", "description": "Document ID (${driverId}_${loadId})." },
+        "loadId": { "type": "string", "description": "Associated Load ID." },
+        "bidId": { "type": "string", "description": "Driver's Bid ID on this load." },
+        "posterId": { "type": "string", "description": "Load Poster UID." },
+        "posterCompanyName": { "type": "string", "description": "Load Poster company name." },
+        "driverId": { "type": "string", "description": "Bidding Driver UID." },
+        "driverDisplayName": { "type": "string", "description": "Driver display name." },
+        "originCity": { "type": "string", "description": "Loading city." },
+        "destinationCity": { "type": "string", "description": "Unloading city." },
+        "totalDistanceKm": { "type": "number", "description": "Route distance in km." },
+        "requiredSizeFeet": { "type": "integer", "description": "Required truck size in feet." },
+        "requiredTonnage": { "type": "number", "description": "Required payload in tons." },
+        "requiredBodyType": { "type": "string", "enum": ["OPEN", "CONTAINER"], "description": "Required body type." },
+        "materialType": { "type": "string", "description": "Material type." },
+        "bidAmount": { "type": "number", "description": "Driver's bid amount in INR." },
+        "bidStatus": { "type": "string", "enum": ["PENDING", "ACCEPTED", "REJECTED"], "description": "Status of driver's bid." },
+        "loadStatus": { "type": "string", "enum": ["ACTIVE", "ACCEPTED", "BOOKED", "CANCELLED", "EXPIRED"], "description": "Live status of the load chosen by Load Poster." },
+        "unlockedPosterPhone": { "type": "string", "description": "Populated ONLY when bidStatus == ACCEPTED so accepted driver gets Load Poster contact number." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp via FieldValue.serverTimestamp()." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp via FieldValue.serverTimestamp()." }
+      },
+      "required": [
+        "tripId",
+        "loadId",
+        "bidId",
+        "posterId",
+        "posterCompanyName",
+        "driverId",
+        "driverDisplayName",
+        "originCity",
+        "destinationCity",
+        "totalDistanceKm",
+        "requiredSizeFeet",
+        "requiredTonnage",
+        "requiredBodyType",
+        "materialType",
+        "bidAmount",
+        "bidStatus",
+        "loadStatus",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "BidPhoneRecord": {
+      "title": "Top-Level Bid Phone Record",
+      "description": "Stores original contact number entered by Vehicle Owner while placing a bid.",
+      "type": "object",
+      "properties": {
+        "bidId": { "type": "string", "description": "Bid ID." },
+        "loadId": { "type": "string", "description": "Load ID." },
+        "posterId": { "type": "string", "description": "Poster UID." },
+        "driverId": { "type": "string", "description": "Driver UID." },
+        "driverFullName": { "type": "string", "description": "Driver display/full name." },
+        "driverFullPhone": { "type": "string", "description": "Original unmasked contact number entered by Vehicle Owner." },
+        "bidAmount": { "type": "number", "description": "Bid amount in INR." },
+        "originCity": { "type": "string", "description": "Origin city." },
+        "destinationCity": { "type": "string", "description": "Destination city." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp via FieldValue.serverTimestamp()." }
+      },
+      "required": [
+        "bidId",
+        "loadId",
+        "posterId",
+        "driverId",
+        "driverFullName",
+        "driverFullPhone",
+        "bidAmount",
+        "originCity",
+        "destinationCity",
+        "createdAt"
+      ]
+    },
+    "AcceptedDealRecord": {
+      "title": "Accepted Deal Record",
+      "description": "Created atomically for each accepted bid (up to 3 per load) storing Load Poster and accepted bidder details.",
+      "type": "object",
+      "properties": {
+        "dealId": { "type": "string", "description": "Deal ID (${loadId}_${acceptedBidId})." },
+        "loadId": { "type": "string", "description": "Accepted Load ID." },
+        "acceptedBidId": { "type": "string", "description": "Accepted Bid ID." },
+        "posterId": { "type": "string", "description": "Load Poster UID." },
+        "posterCompanyName": { "type": "string", "description": "Load Poster company name." },
+        "posterFullPhone": { "type": "string", "description": "Full original phone number of the Load Poster." },
+        "winningDriverId": { "type": "string", "description": "Accepted Vehicle Owner / Driver UID." },
+        "winningDriverName": { "type": "string", "description": "Accepted Vehicle Owner / Driver name." },
+        "driverFullPhone": { "type": "string", "description": "Optional accepted driver phone." },
+        "acceptedBidAmount": { "type": "number", "description": "Accepted freight bid amount in INR." },
+        "originCity": { "type": "string", "description": "Loading city." },
+        "destinationCity": { "type": "string", "description": "Unloading city." },
+        "customerCarePhone": { "type": "string", "description": "Support phone." },
+        "verificationStatus": { "type": "string", "enum": ["ACCEPTED", "PENDING_VERIFICATION", "VERIFIED", "BOOKED", "CANCELLED"], "description": "Deal status." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp via FieldValue.serverTimestamp()." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp via FieldValue.serverTimestamp()." }
+      },
+      "required": [
+        "loadId",
+        "acceptedBidId",
+        "posterId",
+        "posterCompanyName",
+        "posterFullPhone",
+        "winningDriverId",
+        "winningDriverName",
+        "acceptedBidAmount",
+        "originCity",
+        "destinationCity",
+        "customerCarePhone",
+        "verificationStatus",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AppNotification": {
+      "title": "Real-Time Status Notification",
+      "description": "Real-time notification delivered on new bid, bid acceptance (with unlocked direct contact number), and BOOKED / CANCELLED load status changes.",
+      "type": "object",
+      "properties": {
+        "recipientUid": { "type": "string", "description": "Target user UID who owns/reads this notification." },
+        "senderUid": { "type": "string", "description": "Authenticated user UID who triggered the event." },
+        "title": { "type": "string", "description": "Notification title." },
+        "message": { "type": "string", "description": "Notification body message." },
+        "type": { "type": "string", "enum": ["NEW_BID", "BID_ACCEPTED", "LOAD_STATUS_CHANGED", "LOAD_EXPIRED", "SYSTEM"], "description": "Event category." },
+        "loadId": { "type": "string", "description": "Associated load ID." },
+        "bidId": { "type": "string", "description": "Associated bid ID if applicable." },
+        "unlockedPhone": { "type": "string", "description": "Unlocked direct phone number when bid is accepted." },
+        "unlockedPickupAddress": { "type": "string", "description": "Optional pickup location summary." },
+        "unlockedVehicleNumber": { "type": "string", "description": "Optional vehicle summary." },
+        "isRead": { "type": "boolean", "description": "Whether the recipient has read the notification." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp via FieldValue.serverTimestamp()." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp via FieldValue.serverTimestamp()." }
+      },
+      "required": [
+        "recipientUid",
+        "senderUid",
+        "title",
+        "message",
+        "type",
+        "loadId",
+        "isRead",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "FleetVehicle": {
+      "title": "Driver Fleet Vehicle",
+      "description": "Registered commercial vehicle in a driver's fleet used for automated 250km matching.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner driver UID." },
+        "vehicleSizeFeet": { "type": "integer", "description": "Truck length in feet." },
+        "vehicleBodyType": { "type": "string", "enum": ["OPEN", "CONTAINER"], "description": "Open or Closed Container." },
+        "vehicleCity": { "type": "string", "description": "Stationed location / city." },
+        "vehicleLat": { "type": "number", "description": "Location latitude." },
+        "vehicleLng": { "type": "number", "description": "Location longitude." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp." }
+      },
+      "required": ["userId", "vehicleSizeFeet", "vehicleBodyType", "vehicleCity", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserRoleProfile" },
+      "description": "Public role and vehicle summary profile for each user."
+    },
+    "/users/{userId}/fleet/{vehicleId}": {
+      "schema": { "$ref": "#/entities/FleetVehicle" },
+      "description": "Driver registered fleet vehicles used for automatic 250km load matching."
+    },
+    "/users/{userId}/private_kyc/{docId}": {
+      "schema": { "$ref": "#/entities/UserPrivateKyc" },
+      "description": "Owner-only isolated PII & KYC records."
+    },
+    "/loads/{loadId}": {
+      "schema": { "$ref": "#/entities/LoadPost" },
+      "description": "Marketplace freight loads supporting top-3 bid acceptances and BOOKED / CANCELLED status transitions."
+    },
+    "/loads/{loadId}/vault/{vaultId}": {
+      "schema": { "$ref": "#/entities/LoadContactVault" },
+      "description": "Isolated PII vault holding poster unmasked phone; readable by posterId and up to 3 accepted drivers."
+    },
+    "/loads/{loadId}/bids/{bidId}": {
+      "schema": { "$ref": "#/entities/Bid" },
+      "description": "Ranked competitive bids under a load with masked phone numbers."
+    },
+    "/loads/{loadId}/bid_contacts/{bidId}": {
+      "schema": { "$ref": "#/entities/BidPrivateContact" },
+      "description": "Isolated PII vault holding driver unmasked phone; unlocked for posterId when that bid is accepted."
+    },
+    "/driver_trips/{tripId}": {
+      "schema": { "$ref": "#/entities/DriverTripEntry" },
+      "description": "Driver My Trips records tracking every placed bid, unlocked Load Poster contact on acceptance, and real-time BOOKED / CANCELLED load status."
+    },
+    "/bid_phone_records/{bidId}": {
+      "schema": { "$ref": "#/entities/BidPhoneRecord" },
+      "description": "Top-level backend audit record storing original driver contact number entered while placing a bid."
+    },
+    "/accepted_deals/{dealId}": {
+      "schema": { "$ref": "#/entities/AcceptedDealRecord" },
+      "description": "Top-level backend audit record created for each accepted bid."
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/AppNotification" },
+      "description": "Real-time user-scoped notifications for new bids, accepted bid contact unlocks, and BOOKED / CANCELLED status updates."
+    }
+  }
+}
