@@ -98,6 +98,9 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 
+import com.example.ui.localization.AppLocalizationProvider
+import com.example.ui.localization.LocalAppLocalization
+
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -114,8 +117,10 @@ class MainActivity : ComponentActivity() {
         ),
     )
     setContent {
-      VerifiedTrucksTheme {
-        VerifiedTrucksRootNavigation()
+      AppLocalizationProvider {
+        VerifiedTrucksTheme {
+          VerifiedTrucksRootNavigation()
+        }
       }
     }
   }
@@ -177,6 +182,7 @@ private fun AuthenticatedWorkspace(
   val strictAlertLoads by viewModel.strictAlertMatchedLoadsState.collectAsStateWithLifecycle()
   val posterLoadsState by viewModel.posterLoadsState.collectAsStateWithLifecycle()
   val driverTripsState by viewModel.driverTripsState.collectAsStateWithLifecycle()
+  val driverFleetState by viewModel.driverFleetState.collectAsStateWithLifecycle()
   val notificationsState by viewModel.notificationsState.collectAsStateWithLifecycle()
   val selectedLoad by viewModel.selectedLoad.collectAsStateWithLifecycle()
   val selectedLoadBidsState by viewModel.selectedLoadBidsState.collectAsStateWithLifecycle()
@@ -400,6 +406,8 @@ private fun AuthenticatedWorkspace(
                       RealTimeNotificationsScreen(
                         notificationsState = notificationsState,
                         onMarkRead = { viewModel.markNotificationRead(it) },
+                        onClearAll = { viewModel.clearAllNotifications() },
+                        onDeleteNotification = { viewModel.deleteNotification(it) },
                       )
                     else ->
                       ProfileAndKycSummaryScreen(
@@ -422,6 +430,7 @@ private fun AuthenticatedWorkspace(
                           viewModel.updateDriverAvailability(isAvailable = avail)
                         },
                         onSelectLoad = { viewModel.selectLoadForBidding(it) },
+                        onOpenCreateLoad = { showCreateLoadSheet = true },
                       )
                     1 ->
                       DriverWonDealsContent(
@@ -432,12 +441,18 @@ private fun AuthenticatedWorkspace(
                       RealTimeNotificationsScreen(
                         notificationsState = notificationsState,
                         onMarkRead = { viewModel.markNotificationRead(it) },
+                        onClearAll = { viewModel.clearAllNotifications() },
+                        onDeleteNotification = { viewModel.deleteNotification(it) },
                       )
                     else ->
                       ProfileAndKycSummaryScreen(
                         profile = profile,
                         privateKyc = privateKyc,
                         isBusy = isBusy,
+                        fleetVehiclesState = driverFleetState,
+                        onSaveFleetVehicle = { ft, body, loc, plate ->
+                          viewModel.saveDriverFleetVehicle(ft, body, loc, plate)
+                        },
                         onEditVehicleOrKyc = { isEditingRoleOrKyc = true },
                         onSignOut = { GoogleAuthHelper.signOut(context, scope) {} },
                       )
@@ -530,6 +545,7 @@ private fun MarketplaceBottomBar(
   unreadCount: Int,
   onSelectTab: (Int) -> Unit,
 ) {
+  val appStrings = LocalAppLocalization.current
   NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
     if (isPoster) {
       NavigationBarItem(
@@ -538,10 +554,10 @@ private fun MarketplaceBottomBar(
         icon = {
           Icon(
             if (selectedTabIndex == 0) Icons.Filled.Inventory2 else Icons.Outlined.Inventory2,
-            contentDescription = "My Loads",
+            contentDescription = appStrings.myBids,
           )
         },
-        label = { Text("My Loads", fontWeight = FontWeight.SemiBold) },
+        label = { Text(appStrings.myBids, fontWeight = FontWeight.SemiBold) },
         modifier = Modifier.testTag("nav_poster_loads"),
       )
       NavigationBarItem(
@@ -553,7 +569,7 @@ private fun MarketplaceBottomBar(
             unreadCount = unreadCount,
           )
         },
-        label = { Text("Updates", fontWeight = FontWeight.SemiBold) },
+        label = { Text(appStrings.alerts, fontWeight = FontWeight.SemiBold) },
         modifier = Modifier.testTag("nav_notifications"),
       )
       NavigationBarItem(
@@ -562,10 +578,10 @@ private fun MarketplaceBottomBar(
         icon = {
           Icon(
             if (selectedTabIndex == 2) Icons.Filled.Person else Icons.Outlined.Person,
-            contentDescription = "Profile",
+            contentDescription = appStrings.profile,
           )
         },
-        label = { Text("Profile", fontWeight = FontWeight.SemiBold) },
+        label = { Text(appStrings.profile, fontWeight = FontWeight.SemiBold) },
         modifier = Modifier.testTag("nav_profile"),
       )
     } else {
@@ -575,10 +591,10 @@ private fun MarketplaceBottomBar(
         icon = {
           Icon(
             if (selectedTabIndex == 0) Icons.Filled.LocalShipping else Icons.Outlined.LocalShipping,
-            contentDescription = "Live Loads",
+            contentDescription = appStrings.liveLoads,
           )
         },
-        label = { Text("Live Loads", fontWeight = FontWeight.SemiBold) },
+        label = { Text(appStrings.liveLoads, fontWeight = FontWeight.SemiBold) },
         modifier = Modifier.testTag("nav_driver_feed"),
       )
       NavigationBarItem(
@@ -587,10 +603,10 @@ private fun MarketplaceBottomBar(
         icon = {
           Icon(
             if (selectedTabIndex == 1) Icons.Filled.CheckCircle else Icons.Outlined.CheckCircle,
-            contentDescription = "My Trips",
+            contentDescription = appStrings.myTrips,
           )
         },
-        label = { Text("My Trips", fontWeight = FontWeight.SemiBold) },
+        label = { Text(appStrings.myTrips, fontWeight = FontWeight.SemiBold) },
         modifier = Modifier.testTag("nav_driver_won"),
       )
       NavigationBarItem(
@@ -602,7 +618,7 @@ private fun MarketplaceBottomBar(
             unreadCount = unreadCount,
           )
         },
-        label = { Text("Alerts", fontWeight = FontWeight.SemiBold) },
+        label = { Text(appStrings.alerts, fontWeight = FontWeight.SemiBold) },
         modifier = Modifier.testTag("nav_notifications"),
       )
       NavigationBarItem(
@@ -611,10 +627,10 @@ private fun MarketplaceBottomBar(
         icon = {
           Icon(
             if (selectedTabIndex == 3) Icons.Filled.Person else Icons.Outlined.Person,
-            contentDescription = "Profile",
+            contentDescription = appStrings.profile,
           )
         },
-        label = { Text("Profile", fontWeight = FontWeight.SemiBold) },
+        label = { Text(appStrings.profile, fontWeight = FontWeight.SemiBold) },
         modifier = Modifier.testTag("nav_profile"),
       )
     }
@@ -628,13 +644,14 @@ private fun MarketplaceSideRail(
   unreadCount: Int,
   onSelectTab: (Int) -> Unit,
 ) {
+  val appStrings = LocalAppLocalization.current
   NavigationRail(containerColor = MaterialTheme.colorScheme.surface) {
     if (isPoster) {
       NavigationRailItem(
         selected = selectedTabIndex == 0,
         onClick = { onSelectTab(0) },
-        icon = { Icon(Icons.Filled.Inventory2, contentDescription = "My Loads") },
-        label = { Text("My Loads") },
+        icon = { Icon(Icons.Filled.Inventory2, contentDescription = appStrings.myBids) },
+        label = { Text(appStrings.myBids) },
       )
       NavigationRailItem(
         selected = selectedTabIndex == 1,
@@ -642,26 +659,26 @@ private fun MarketplaceSideRail(
         icon = {
           NotificationBadgedIcon(selected = selectedTabIndex == 1, unreadCount = unreadCount)
         },
-        label = { Text("Updates") },
+        label = { Text(appStrings.alerts) },
       )
       NavigationRailItem(
         selected = selectedTabIndex == 2,
         onClick = { onSelectTab(2) },
-        icon = { Icon(Icons.Filled.Person, contentDescription = "Profile") },
-        label = { Text("Profile") },
+        icon = { Icon(Icons.Filled.Person, contentDescription = appStrings.profile) },
+        label = { Text(appStrings.profile) },
       )
     } else {
       NavigationRailItem(
         selected = selectedTabIndex == 0,
         onClick = { onSelectTab(0) },
-        icon = { Icon(Icons.Filled.LocalShipping, contentDescription = "Live Loads") },
-        label = { Text("Live Loads") },
+        icon = { Icon(Icons.Filled.LocalShipping, contentDescription = appStrings.liveLoads) },
+        label = { Text(appStrings.liveLoads) },
       )
       NavigationRailItem(
         selected = selectedTabIndex == 1,
         onClick = { onSelectTab(1) },
-        icon = { Icon(Icons.Filled.CheckCircle, contentDescription = "My Trips") },
-        label = { Text("My Trips") },
+        icon = { Icon(Icons.Filled.CheckCircle, contentDescription = appStrings.myTrips) },
+        label = { Text(appStrings.myTrips) },
       )
       NavigationRailItem(
         selected = selectedTabIndex == 2,
@@ -669,13 +686,13 @@ private fun MarketplaceSideRail(
         icon = {
           NotificationBadgedIcon(selected = selectedTabIndex == 2, unreadCount = unreadCount)
         },
-        label = { Text("Alerts") },
+        label = { Text(appStrings.alerts) },
       )
       NavigationRailItem(
         selected = selectedTabIndex == 3,
         onClick = { onSelectTab(3) },
-        icon = { Icon(Icons.Filled.Person, contentDescription = "Profile") },
-        label = { Text("Profile") },
+        icon = { Icon(Icons.Filled.Person, contentDescription = appStrings.profile) },
+        label = { Text(appStrings.profile) },
       )
     }
   }

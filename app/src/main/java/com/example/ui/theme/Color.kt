@@ -2,18 +2,19 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Bold Executive Verified Trucks Palette (High-Contrast Cobalt Navy + Vibrant Emerald)
-val RoyalBluePrimary = Color(0xFF003DAE)
-val RoyalBlueDark = Color(0xFF001E5A)
-val RoyalBlueBright = Color(0xFF0B57D0)
-val RoyalBlueContainer = Color(0xFFD6E4FF)
-val OnRoyalBlueContainer = Color(0xFF001645)
+// Premium Royal Blue (#004AAD) and Emerald Green (#10B981) Palette
+val RoyalBluePrimary = Color(0xFF004AAD)
+val RoyalBlueDark = Color(0xFF002F75)
+val RoyalBlueBright = Color(0xFF1A65D8)
+val RoyalBlueContainer = Color(0xFFEBF3FF)
+val RoyalBlueSoftBackground = Color(0xFFEBF3FF)
+val OnRoyalBlueContainer = Color(0xFF002966)
 
-val EmeraldGreenAccent = Color(0xFF009E60)
+val EmeraldGreenAccent = Color(0xFF10B981)
 val EmeraldGreenVibrant = Color(0xFF10B981)
-val EmeraldGreenDark = Color(0xFF047857)
-val EmeraldGreenContainer = Color(0xFFC6F6DF)
-val OnEmeraldGreenContainer = Color(0xFF033F26)
+val EmeraldGreenDark = Color(0xFF059669)
+val EmeraldGreenContainer = Color(0xFFD1FAE5)
+val OnEmeraldGreenContainer = Color(0xFF064E3B)
 
 val CleanWhiteBackground = Color(0xFFFFFFFF)
 val LightSurfaceSlate = Color(0xFFF2F6FC)

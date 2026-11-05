@@ -367,7 +367,7 @@ private fun PosterLoadItemCard(
                 when {
                   isBooked -> "📦 BOOKED"
                   isCancelled -> "❌ CANCELLED"
-                  isAccepted -> "✅ $acceptedCount/3 ACCEPTED"
+                  isAccepted -> "✅ $acceptedCount ACCEPTED"
                   closed -> "CLOSED"
                   else -> "⚡ LIVE"
                 },
@@ -408,8 +408,10 @@ private fun PosterLoadItemCard(
 
       Spacer(modifier = Modifier.height(10.dp))
 
+      val fromDisplay = GeoAndPrivacyUtils.resolveCityWithState(load.originCity)
+      val toDisplay = GeoAndPrivacyUtils.resolveCityWithState(load.destinationCity)
       Text(
-        text = "📍 ${load.originCity}  →  🏁 ${load.destinationCity}",
+        text = "📍 $fromDisplay  →  🏁 $toDisplay",
         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
         color = MaterialTheme.colorScheme.onSurface,
       )
@@ -440,7 +442,7 @@ private fun PosterLoadItemCard(
           Text(
             text =
               if (load.bidCount > 0 && load.lowestBidAmount != null) {
-                "💰 ${load.bidCount} Bids • L1: ₹${load.lowestBidAmount.toInt()}"
+                "💰 ${load.bidCount} Bids • Lowest: ₹${load.lowestBidAmount.toInt()}"
               } else {
                 "⏳ Awaiting bids"
               },
@@ -454,7 +456,7 @@ private fun PosterLoadItemCard(
             when {
               isBooked -> "📦 Booked • View →"
               isCancelled -> "❌ Cancelled • View →"
-              isAccepted -> "✅ Contacts ($acceptedCount/3) →"
+              isAccepted -> "✅ Contacts ($acceptedCount) →"
               else -> "🏆 My Bids →"
             },
           style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.ExtraBold),
@@ -462,7 +464,7 @@ private fun PosterLoadItemCard(
         )
       }
 
-      // Quick Mark Booked / Cancelled actions right inside My Loads / My Bids
+      // Quick Booked / Cancelled actions right inside My Loads / My Bids
       if (load.status in listOf("ACTIVE", "ACCEPTED") && !closed) {
         Spacer(modifier = Modifier.height(12.dp))
         Row(
@@ -485,7 +487,7 @@ private fun PosterLoadItemCard(
           ) {
             Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(5.dp))
-            Text("Mark Booked", fontWeight = FontWeight.Bold)
+            Text("Booked", fontWeight = FontWeight.Bold)
           }
           OutlinedButton(
             onClick = { onMarkLoadStatus("CANCELLED") },
@@ -503,7 +505,7 @@ private fun PosterLoadItemCard(
           ) {
             Icon(Icons.Filled.Cancel, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(5.dp))
-            Text("Cancel Load", fontWeight = FontWeight.Bold)
+            Text("Cancelled", fontWeight = FontWeight.Bold)
           }
         }
       }

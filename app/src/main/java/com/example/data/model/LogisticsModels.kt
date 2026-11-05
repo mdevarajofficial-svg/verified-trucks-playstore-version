@@ -239,11 +239,16 @@ data class FleetVehicle(
   val vehicleSizeFeet: Int = 32,
   val vehicleBodyType: String = VehicleBodyType.CONTAINER.name,
   val vehicleCity: String = "",
+  val vehiclePlate: String? = null,
   val vehicleLat: Double? = null,
   val vehicleLng: Double? = null,
   @ServerTimestamp val createdAt: Timestamp? = null,
   @ServerTimestamp val updatedAt: Timestamp? = null,
-)
+) {
+  val sizeFeet: Int get() = vehicleSizeFeet
+  val bodyType: String get() = vehicleBodyType
+  val currentCity: String get() = vehicleCity
+}
 
 data class AcceptedBidderContact(
   val bidId: String,

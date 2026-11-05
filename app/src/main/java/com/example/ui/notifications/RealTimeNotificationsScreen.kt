@@ -27,7 +27,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Gavel
+import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material3.Button
@@ -93,6 +95,8 @@ object SystemNotificationHelper {
 fun RealTimeNotificationsScreen(
   notificationsState: UiState<List<AppNotification>>,
   onMarkRead: (String) -> Unit,
+  onClearAll: () -> Unit = {},
+  onDeleteNotification: (String) -> Unit = {},
 ) {
   val context = LocalContext.current
   Box(
@@ -105,11 +109,32 @@ fun RealTimeNotificationsScreen(
       verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
       item {
-        Text(
-          text = "🔔 Live Alerts & Updates",
-          style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold),
-          color = MaterialTheme.colorScheme.primary,
-        )
+        val hasNotifications =
+          (notificationsState as? UiState.Success)?.data?.isNotEmpty() == true
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Text(
+            text = "🔔 Live Alerts & Updates",
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold),
+            color = MaterialTheme.colorScheme.primary,
+          )
+          if (hasNotifications) {
+            ButtonDefaults.outlinedButtonColors()
+            androidx.compose.material3.TextButton(
+              onClick = onClearAll,
+              modifier = Modifier.testTag("clear_all_notifications_button"),
+            ) {
+              Text(
+                text = "🗑️ Clear All",
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.error,
+              )
+            }
+          }
+        }
       }
 
       when (notificationsState) {
@@ -204,11 +229,12 @@ fun RealTimeNotificationsScreen(
                           when (notif.type) {
                             "BID_ACCEPTED" -> Icons.Filled.CheckCircle
                             "NEW_BID" -> Icons.Filled.Gavel
+                            "MATCHING_LOAD" -> Icons.Filled.LocalShipping
                             else -> Icons.Filled.NotificationsActive
                           },
                         contentDescription = null,
                         tint =
-                          if (isAcceptedAlert) {
+                          if (isAcceptedAlert || notif.type == "MATCHING_LOAD") {
                             MaterialTheme.colorScheme.secondary
                           } else {
                             MaterialTheme.colorScheme.primary
@@ -221,16 +247,30 @@ fun RealTimeNotificationsScreen(
                       )
                     }
 
-                    if (!notif.isRead) {
-                      Surface(
-                        color = MaterialTheme.colorScheme.secondary,
-                        shape = RoundedCornerShape(50),
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                      if (!notif.isRead) {
+                        Surface(
+                          color = MaterialTheme.colorScheme.secondary,
+                          shape = RoundedCornerShape(50),
+                        ) {
+                          Text(
+                            text = "NEW",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSecondary,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                          )
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                      }
+                      androidx.compose.material3.IconButton(
+                        onClick = { onDeleteNotification(notif.id) },
+                        modifier = Modifier.size(28.dp).testTag("delete_notification_${notif.id}"),
                       ) {
-                        Text(
-                          text = "NEW",
-                          style = MaterialTheme.typography.labelSmall,
-                          color = MaterialTheme.colorScheme.onSecondary,
-                          modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        Icon(
+                          imageVector = Icons.Filled.Delete,
+                          contentDescription = "Delete notification",
+                          tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                          modifier = Modifier.size(16.dp),
                         )
                       }
                     }

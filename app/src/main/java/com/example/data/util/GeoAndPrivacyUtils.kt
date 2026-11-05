@@ -142,4 +142,46 @@ object GeoAndPrivacyUtils {
     val hash = (driverUid.hashCode() and 0x7FFFFFFF) % 9000 + 1000
     return "Verified Fleet #$hash"
   }
+
+  /**
+   * Resolves ONLY the Main City Name + State Code in parentheses (e.g. Bengaluru (KA), Mumbai (MH)).
+   */
+  fun resolveCityWithState(rawCity: String): String {
+    val trimmed = rawCity.trim()
+    if (trimmed.isEmpty()) return ""
+    val parenMatch = Regex("""^(.*?)\s*\(([A-Z]{2})\)""").find(trimmed)
+    if (parenMatch != null) {
+      val mainCity = parenMatch.groupValues[1].substringBefore("/").substringBefore("(").trim()
+      val state = parenMatch.groupValues[2]
+      return "$mainCity ($state)"
+    }
+    val baseCity = trimmed.substringBefore("(").substringBefore("/").trim()
+    val hub = MAJOR_LOGISTICS_HUBS.find {
+      it.name.contains(baseCity, ignoreCase = true) || baseCity.contains(it.name.substringBefore("(").trim(), ignoreCase = true)
+    }
+    val stateCode = hub?.stateCode ?: when (baseCity.lowercase()) {
+      "bengaluru", "bangalore", "mysuru", "mysore", "hubballi", "hubli", "mangaluru", "mangalore", "belagavi", "belgaum" -> "KA"
+      "mumbai", "pune", "nagpur", "nashik", "aurangabad", "thane", "navi mumbai" -> "MH"
+      "chennai", "coimbatore", "madurai", "salem", "tiruppur", "hosur", "trichy" -> "TN"
+      "hyderabad", "secunderabad", "warangal", "nizamabad" -> "TS"
+      "delhi", "new delhi" -> "DL"
+      "kolkata", "calcutta", "howrah", "siliguri", "dankuni", "haldia" -> "WB"
+      "ahmedabad", "surat", "vadodara", "baroda", "rajkot", "vapi", "mundra", "gandhidham" -> "GJ"
+      "jaipur", "jodhpur", "udaipur", "kota", "bhiwadi" -> "RJ"
+      "lucknow", "kanpur", "agra", "varanasi", "noida", "ghaziabad", "meerut" -> "UP"
+      "indore", "bhopal", "gwalior", "jabalpur" -> "MP"
+      "visakhapatnam", "vizag", "vijayawada", "guntur", "tirupati", "nellore" -> "AP"
+      "kochi", "cochin", "kozhikode", "calicut", "thiruvananthapuram", "trivandrum" -> "KL"
+      "patna", "gaya" -> "BR"
+      "ranchi", "jamshedpur", "dhanbad" -> "JH"
+      "raipur", "bhilai", "bilaspur" -> "CG"
+      "bhubaneswar", "cuttack", "rourkela" -> "OD"
+      "guwahati" -> "AS"
+      "ludhiana", "amritsar", "jalandhar" -> "PB"
+      "chandigarh" -> "CH"
+      "gurugram", "gurgaon", "faridabad", "panipat", "sonipat" -> "HR"
+      else -> "IN"
+    }
+    return "$baseCity ($stateCode)"
+  }
 }

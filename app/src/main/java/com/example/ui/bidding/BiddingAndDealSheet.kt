@@ -236,7 +236,7 @@ fun BiddingAndDealBottomSheet(
         Text(
           text =
             if (isPosterOfThisLoad) {
-              "Lowest on Top • Top 3 ($acceptedCount/3)"
+              "Lowest on Top • ($acceptedCount accepted)"
             } else {
               "Lowest on Top"
             },
@@ -461,7 +461,7 @@ private fun StatusPillBadge(
     when (status) {
       "BOOKED" -> "📦 BOOKED"
       "CANCELLED" -> "❌ CANCELLED"
-      "ACCEPTED" -> "✅ $acceptedCount/3 ACCEPTED"
+      "ACCEPTED" -> "✅ $acceptedCount ACCEPTED"
       "EXPIRED" -> "⏳ EXPIRED"
       else -> "⚡ LIVE"
     }
@@ -595,7 +595,7 @@ fun UnlockedContactConfirmationCard(
                   Icon(Icons.Filled.Call, contentDescription = null)
                   Spacer(modifier = Modifier.width(8.dp))
                   Text(
-                    "📞 Call ${bidder.driverFullName} (${bidder.driverDirectPhone})",
+                    bidder.driverDirectPhone,
                     fontWeight = FontWeight.ExtraBold,
                   )
                 }
@@ -638,7 +638,7 @@ fun UnlockedContactConfirmationCard(
           ) {
             Icon(Icons.Filled.Call, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("📞 Call Load Poster ($posterPhone)", fontWeight = FontWeight.ExtraBold)
+            Text(posterPhone, fontWeight = FontWeight.ExtraBold)
           }
         } else {
           Text(
@@ -813,15 +813,8 @@ private fun LeaderboardBidCard(
               },
             shape = RoundedCornerShape(8.dp),
           ) {
-            val rankLabel =
-              when (rank) {
-                1 -> "🏆 L1"
-                2 -> "🥈 L2"
-                3 -> "🥉 L3"
-                else -> "L$rank"
-              }
             Text(
-              text = rankLabel,
+              text = "$rank",
               style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold),
               color =
                 when {
@@ -829,16 +822,16 @@ private fun LeaderboardBidCard(
                   isTopThree -> MaterialTheme.colorScheme.primary
                   else -> MaterialTheme.colorScheme.onSurfaceVariant
                 },
-              modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+              modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
             )
           }
           Spacer(modifier = Modifier.width(10.dp))
           Column(modifier = Modifier.weight(1f, fill = false)) {
             val titleLabel =
-              when {
-                isPosterOfThisLoad -> "🚛 ${bid.driverDisplayName}"
-                isOwnDriverBid -> "🚛 ${bid.driverAnonymousAlias} (Your Bid)"
-                else -> "🚛 ${bid.driverAnonymousAlias}"
+              if (isAcceptedBid) {
+                if (isPosterOfThisLoad) "🚛 ${bid.driverDisplayName}" else "🚛 Bidder #$rank"
+              } else {
+                if (isOwnDriverBid) "S.No #$rank (Your Bid)" else "S.No #$rank"
               }
             Text(
               text = titleLabel,
@@ -847,21 +840,13 @@ private fun LeaderboardBidCard(
               maxLines = 1,
               overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(
-                imageVector = Icons.Filled.Star,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.size(14.dp),
-              )
-              Text(
-                text = " ${String.format("%.1f", bid.driverRating)} • ${bid.vehicleDetails}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-              )
-            }
+            Text(
+              text = if (isAcceptedBid) "Bid Accepted" else "Verified Bidder",
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              maxLines = 1,
+              overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
           }
         }
 
@@ -872,13 +857,6 @@ private fun LeaderboardBidCard(
             text = "₹${bid.bidAmount.toInt()}",
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
             color = MaterialTheme.colorScheme.primary,
-            softWrap = false,
-            maxLines = 1,
-          )
-          Text(
-            text = "⚡ ${bid.availabilityTime}",
-            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.secondary,
             softWrap = false,
             maxLines = 1,
           )
@@ -903,7 +881,7 @@ private fun LeaderboardBidCard(
             ) {
               Icon(Icons.Filled.Call, contentDescription = null, modifier = Modifier.size(16.dp))
               Spacer(modifier = Modifier.width(6.dp))
-              Text("📞 $unlockedDriverPhone", fontWeight = FontWeight.ExtraBold)
+              Text(unlockedDriverPhone, fontWeight = FontWeight.ExtraBold)
             }
           } else {
             Spacer(modifier = Modifier.width(4.dp))
@@ -941,10 +919,9 @@ private fun LeaderboardBidCard(
             shape = RoundedCornerShape(10.dp),
             modifier = Modifier.height(48.dp).testTag("accept_bid_button_$rank"),
           ) {
-            Text("✅ Accept Bid (L$rank)", fontWeight = FontWeight.ExtraBold)
+            Text("Accept Bid", fontWeight = FontWeight.ExtraBold)
           }
         }
-      }
       }
     }
   }

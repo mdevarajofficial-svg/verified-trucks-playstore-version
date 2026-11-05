@@ -7,6 +7,7 @@ import com.example.data.model.AppNotification
 import com.example.data.model.Bid
 import com.example.data.model.BidPrivateContact
 import com.example.data.model.DriverTripEntry
+import com.example.data.model.FleetVehicle
 import com.example.data.model.LoadContactVault
 import com.example.data.model.LoadPost
 import com.example.data.model.UnlockedDealContacts
@@ -16,6 +17,7 @@ import com.example.data.model.UserRoleProfile
 import com.example.data.util.GeoAndPrivacyUtils
 import com.example.data.util.OperationType
 import com.example.data.util.handleFirestoreError
+import kotlin.math.roundToInt
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.DocumentSnapshot

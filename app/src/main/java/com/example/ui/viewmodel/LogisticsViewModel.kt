@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.model.AppNotification
 import com.example.data.model.Bid
 import com.example.data.model.DriverTripEntry
+import com.example.data.model.FleetVehicle
 import com.example.data.model.LoadPost
 import com.example.data.model.MatchedLoadItem
 import com.example.data.model.UnlockedDealContacts
