@@ -43,6 +43,7 @@ data class LoadFeedFilter(
   val searchQuery: String = "",
   val sizeFeetFilter: Int? = null,
   val bodyTypeFilter: String? = null, // null = All, "OPEN", "CONTAINER"
+  val stateCodeFilter: String? = null, // null = All, "KA", "TN", "TS", "AP", "KL", "MH", "MP", "OD", "RJ", "UP", "WB"
 )
 
 class LogisticsViewModel(
@@ -222,7 +223,14 @@ class LogisticsViewModel(
                   filter.bodyTypeFilter == null ||
                     item.load.requiredBodyType.equals(filter.bodyTypeFilter, ignoreCase = true)
 
-                matchesSearch && matchesFilterSize && matchesFilterBody
+                val matchesFilterState =
+                  filter.stateCodeFilter == null ||
+                    GeoAndPrivacyUtils.resolveCityWithState(item.load.originCity).contains("(${filter.stateCodeFilter})", ignoreCase = true) ||
+                    GeoAndPrivacyUtils.resolveCityWithState(item.load.destinationCity).contains("(${filter.stateCodeFilter})", ignoreCase = true) ||
+                    item.load.originCity.contains(filter.stateCodeFilter, ignoreCase = true) ||
+                    item.load.destinationCity.contains(filter.stateCodeFilter, ignoreCase = true)
+
+                matchesSearch && matchesFilterSize && matchesFilterBody && matchesFilterState
               }
               .sortedWith(
                 compareByDescending<MatchedLoadItem> { it.isFleetMatch }

@@ -59,10 +59,20 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.ui.unit.sp
 import com.example.data.model.Bid
 import com.example.data.model.LoadPost
 import com.example.data.model.UnlockedDealContacts
 import com.example.data.repository.LogisticsRepository
+import com.example.data.util.GeoAndPrivacyUtils
+import com.example.ui.localization.LocalAppLocalization
+import com.example.ui.theme.EmeraldGreenAccent
+import com.example.ui.theme.EmeraldGreenContainer
+import com.example.ui.theme.EmeraldGreenDark
+import com.example.ui.theme.OnEmeraldGreenContainer
+import com.example.ui.theme.RoyalBluePrimary
+import com.example.ui.theme.RoyalBlueSoftBackground
 import com.example.ui.viewmodel.UiState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -106,72 +116,73 @@ fun BiddingAndDealBottomSheet(
           .padding(horizontal = 20.dp, vertical = 8.dp),
       verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-      // Load Route, Kilometer Pill & Live Status Header
-      Row(
+      val appStrings = LocalAppLocalization.current
+
+      // Properly aligned Futuristic Load Details Card on top (No state initials)
+      Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = RoyalBlueSoftBackground,
+        border = BorderStroke(1.2.dp, RoyalBluePrimary.copy(alpha = 0.35f)),
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Top,
       ) {
-        Column(modifier = Modifier.weight(1f)) {
-          Text(
-            text = "📍 ${load.originCity}  →  🏁 ${load.destinationCity}",
-            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold),
-            color = MaterialTheme.colorScheme.primary,
-          )
-          Spacer(modifier = Modifier.height(6.dp))
-          Text(
-            text =
-              "🚛 ${load.requiredSizeFeet} ft ${load.requiredBodyType} • ⚖️ ${load.requiredTonnage} Tons • 📦 ${load.materialType}",
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = MaterialTheme.colorScheme.onSurface,
-          )
-          Spacer(modifier = Modifier.height(6.dp))
+        Column(
+          modifier = Modifier.padding(16.dp),
+          verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
           Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
           ) {
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              modifier = Modifier.weight(1f),
+            ) {
+              Text(
+                text = GeoAndPrivacyUtils.cleanCityNameOnly(load.originCity),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
+                color = MaterialTheme.colorScheme.onSurface,
+              )
+              Spacer(modifier = Modifier.width(8.dp))
+              Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = RoyalBluePrimary,
+                modifier = Modifier.size(16.dp),
+              )
+              Spacer(modifier = Modifier.width(8.dp))
+              Text(
+                text = GeoAndPrivacyUtils.cleanCityNameOnly(load.destinationCity),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
+                color = MaterialTheme.colorScheme.onSurface,
+              )
+            }
+            StatusPillBadge(status = load.status, acceptedCount = acceptedCount)
+          }
+
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+          ) {
+            Text(
+              text = "${load.requiredSizeFeet} ft ${load.requiredBodyType} • ${load.requiredTonnage}T • ${load.materialType}",
+              style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Surface(
-              color = MaterialTheme.colorScheme.secondaryContainer,
+              color = EmeraldGreenContainer,
               shape = RoundedCornerShape(50),
             ) {
-              Row(
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                verticalAlignment = Alignment.CenterVertically,
-              ) {
-                Icon(
-                  imageVector = Icons.Filled.Route,
-                  contentDescription = null,
-                  tint = MaterialTheme.colorScheme.secondary,
-                  modifier = Modifier.size(14.dp),
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                  text = "🛣️ $routeKm km",
-                  style =
-                    MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold),
-                  color = MaterialTheme.colorScheme.onSecondaryContainer,
-                )
-              }
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(
-                imageVector = Icons.Filled.Apartment,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(15.dp),
-              )
-              Spacer(modifier = Modifier.width(4.dp))
               Text(
-                text = load.posterCompanyName,
-                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = "$routeKm km",
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black),
+                color = OnEmeraldGreenContainer,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
               )
             }
           }
         }
-
-        StatusPillBadge(status = load.status, acceptedCount = acceptedCount)
       }
 
       // Load Poster Controls: Mark Load as BOOKED or CANCELLED
@@ -210,7 +221,7 @@ fun BiddingAndDealBottomSheet(
 
       HorizontalDivider()
 
-      // Bidding Leaderboard Header (Lowest bid amount always on top)
+      // Bidding Leaderboard Header: Exactly 1 trophy icon on left, minimal title "Live Bids"
       Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -220,28 +231,18 @@ fun BiddingAndDealBottomSheet(
           Icon(
             imageVector = Icons.Filled.EmojiEvents,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
+            tint = RoyalBluePrimary,
           )
           Spacer(modifier = Modifier.width(8.dp))
           Text(
-            text =
-              if (isPosterOfThisLoad) {
-                "🏆 My Bids Leaderboard"
-              } else {
-                "🏆 Live Bidding Leaderboard"
-              },
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
+            text = appStrings.liveBids,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
           )
         }
         Text(
-          text =
-            if (isPosterOfThisLoad) {
-              "Lowest on Top • ($acceptedCount accepted)"
-            } else {
-              "Lowest on Top"
-            },
+          text = appStrings.lowestFirst,
           style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-          color = MaterialTheme.colorScheme.secondary,
+          color = EmeraldGreenDark,
         )
       }
 
@@ -252,7 +253,7 @@ fun BiddingAndDealBottomSheet(
             modifier = Modifier.fillMaxWidth().padding(24.dp),
             contentAlignment = Alignment.Center,
           ) {
-            CircularProgressIndicator()
+            CircularProgressIndicator(color = RoyalBluePrimary)
           }
         }
         is UiState.Error -> {
@@ -265,7 +266,7 @@ fun BiddingAndDealBottomSheet(
         is UiState.Success -> {
           if (bidsState.data.isEmpty()) {
             Surface(
-              color = MaterialTheme.colorScheme.surfaceVariant,
+              color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
               shape = RoundedCornerShape(16.dp),
               modifier = Modifier.fillMaxWidth(),
             ) {
@@ -276,23 +277,13 @@ fun BiddingAndDealBottomSheet(
                 Icon(
                   imageVector = Icons.Filled.Gavel,
                   contentDescription = null,
-                  tint = MaterialTheme.colorScheme.primary,
-                  modifier = Modifier.size(32.dp),
+                  tint = RoyalBluePrimary,
+                  modifier = Modifier.size(28.dp),
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                  text = "⏳ No bids placed yet",
+                  text = appStrings.noBidsYet,
                   style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                )
-                Text(
-                  text =
-                    if (isPosterOfThisLoad) {
-                      "Lowest bids will appear at the top. You can accept up to the Top 3 bids."
-                    } else {
-                      "Be the first vehicle owner to place the lowest L1 bid on top!"
-                    },
-                  style = MaterialTheme.typography.bodySmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
               }
             }
@@ -657,6 +648,7 @@ private fun DriverBlindBidForm(
   isBusy: Boolean,
   onPlaceBid: (Double, String) -> Unit,
 ) {
+  val appStrings = LocalAppLocalization.current
   var bidAmountText by remember { mutableStateOf("") }
   var contactPhoneText by remember { mutableStateOf("") }
   val parsedBid = bidAmountText.toDoubleOrNull() ?: 0.0
@@ -665,9 +657,9 @@ private fun DriverBlindBidForm(
     parsedBid > 0 && phoneDigitCount in 10..13 && contactPhoneText.trim().length in 10..16
 
   Card(
-    shape = RoundedCornerShape(18.dp),
+    shape = RoundedCornerShape(22.dp),
     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)),
+    border = BorderStroke(1.5.dp, RoyalBluePrimary.copy(alpha = 0.35f)),
     elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
   ) {
     Column(
@@ -675,24 +667,25 @@ private fun DriverBlindBidForm(
       verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
       Text(
-        text = "💰 Place Your Bid",
-        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
-        color = MaterialTheme.colorScheme.primary,
+        text = appStrings.placeBidNow,
+        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
+        color = RoyalBluePrimary,
       )
 
       OutlinedTextField(
         value = bidAmountText,
         onValueChange = { bidAmountText = it.filter { ch -> ch.isDigit() }.take(8) },
-        label = { Text("💰 Bid Amount (₹)") },
+        label = { Text(appStrings.amount) },
         leadingIcon = {
           Icon(
             Icons.Filled.CurrencyRupee,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
+            tint = RoyalBluePrimary,
           )
         },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         singleLine = true,
+        shape = RoundedCornerShape(14.dp),
         modifier = Modifier.fillMaxWidth().testTag("bid_amount_input"),
       )
 
@@ -701,16 +694,17 @@ private fun DriverBlindBidForm(
         onValueChange = { raw ->
           contactPhoneText = raw.filter { ch -> ch.isDigit() || ch == '+' }.take(15)
         },
-        label = { Text("📞 Your Contact Number") },
+        label = { Text(appStrings.phone) },
         leadingIcon = {
           Icon(
             Icons.Filled.Call,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
+            tint = RoyalBluePrimary,
           )
         },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
         singleLine = true,
+        shape = RoundedCornerShape(14.dp),
         modifier = Modifier.fillMaxWidth().testTag("bid_contact_phone_input"),
       )
 
@@ -725,14 +719,14 @@ private fun DriverBlindBidForm(
         enabled = isFormValid && !isBusy,
         colors =
           ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.secondary,
+            containerColor = RoyalBluePrimary,
             contentColor = Color.White,
           ),
         modifier =
           Modifier.fillMaxWidth()
-            .height(52.dp)
+            .height(50.dp)
             .testTag("submit_blind_bid_button"),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(50),
       ) {
         if (isBusy) {
           CircularProgressIndicator(
@@ -744,8 +738,8 @@ private fun DriverBlindBidForm(
           Icon(Icons.Filled.Gavel, contentDescription = null, modifier = Modifier.size(18.dp))
           Spacer(modifier = Modifier.width(8.dp))
           Text(
-            "Place Bid",
-            fontWeight = FontWeight.ExtraBold,
+            text = appStrings.placeBidNow,
+            fontWeight = FontWeight.Black,
           )
         }
       }

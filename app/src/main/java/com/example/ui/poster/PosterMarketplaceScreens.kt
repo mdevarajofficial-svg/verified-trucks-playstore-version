@@ -69,6 +69,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.data.location.MapplsLocationService
 import com.example.data.model.LoadPost
 import com.example.data.model.UserPrivateKyc
@@ -76,6 +77,13 @@ import com.example.data.model.UserRoleProfile
 import com.example.data.model.VehicleBodyType
 import com.example.data.util.GeoAndPrivacyUtils
 import com.example.ui.components.MapplsLocationSearchField
+import com.example.ui.localization.LocalAppLocalization
+import com.example.ui.theme.EmeraldGreenAccent
+import com.example.ui.theme.EmeraldGreenContainer
+import com.example.ui.theme.EmeraldGreenDark
+import com.example.ui.theme.OnEmeraldGreenContainer
+import com.example.ui.theme.RoyalBluePrimary
+import com.example.ui.theme.RoyalBlueSoftBackground
 import com.example.ui.theme.VerifiedTrucksBrushes
 import com.example.ui.viewmodel.UiState
 import kotlinx.coroutines.delay
@@ -408,8 +416,8 @@ private fun PosterLoadItemCard(
 
       Spacer(modifier = Modifier.height(10.dp))
 
-      val fromDisplay = GeoAndPrivacyUtils.resolveCityWithState(load.originCity)
-      val toDisplay = GeoAndPrivacyUtils.resolveCityWithState(load.destinationCity)
+      val fromDisplay = GeoAndPrivacyUtils.cleanCityNameOnly(load.originCity)
+      val toDisplay = GeoAndPrivacyUtils.cleanCityNameOnly(load.destinationCity)
       Text(
         text = "📍 $fromDisplay  →  🏁 $toDisplay",
         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
@@ -616,6 +624,8 @@ fun CreateLoadBottomSheet(
       materialType.trim().length >= 2 &&
       parsedTonnage in 0.5..100.0
 
+  val appStrings = LocalAppLocalization.current
+
   ModalBottomSheet(
     onDismissRequest = onDismiss,
     sheetState = sheetState,
@@ -629,15 +639,33 @@ fun CreateLoadBottomSheet(
           .padding(horizontal = 20.dp, vertical = 8.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-      Text(
-        text = "🚛 Post Load",
-        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold),
-        color = MaterialTheme.colorScheme.primary,
-      )
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Text(
+          text = appStrings.postLoadTitle,
+          style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Black),
+          color = RoyalBluePrimary,
+        )
+        Surface(
+          color = RoyalBlueSoftBackground,
+          shape = RoundedCornerShape(50),
+          border = BorderStroke(1.dp, RoyalBluePrimary.copy(alpha = 0.35f)),
+        ) {
+          Text(
+            text = "⚡ VERIFIED DISPATCH",
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black, letterSpacing = 0.6.sp),
+            color = RoyalBluePrimary,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+          )
+        }
+      }
 
       // Loading Location (Empty box, simple heading, zero pre-filled cities)
       MapplsLocationSearchField(
-        heading = "📍 Loading Location",
+        heading = "📍 ${appStrings.loadingLocation}",
         value = originName,
         testTag = "origin_mappls_search_field",
         onValueChange = { typed ->
@@ -656,7 +684,7 @@ fun CreateLoadBottomSheet(
 
       // Unloading Location (Empty box, simple heading, zero pre-filled cities)
       MapplsLocationSearchField(
-        heading = "🏁 Unloading Location",
+        heading = "🏁 ${appStrings.unloadingLocation}",
         value = destName,
         testTag = "dest_mappls_search_field",
         onValueChange = { typed ->
@@ -677,8 +705,8 @@ fun CreateLoadBottomSheet(
       if (calculatedKm > 0.0 || isCalculatingDistance) {
         Surface(
           shape = RoundedCornerShape(14.dp),
-          color = MaterialTheme.colorScheme.secondaryContainer,
-          border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.secondary),
+          color = EmeraldGreenContainer,
+          border = BorderStroke(1.5.dp, EmeraldGreenAccent),
           modifier = Modifier.fillMaxWidth().testTag("auto_calculated_km_banner"),
         ) {
           Row(
@@ -689,38 +717,38 @@ fun CreateLoadBottomSheet(
             if (isCalculatingDistance) {
               CircularProgressIndicator(
                 modifier = Modifier.size(20.dp),
-                color = MaterialTheme.colorScheme.secondary,
+                color = EmeraldGreenDark,
                 strokeWidth = 2.dp,
               )
             } else {
               Icon(
                 imageVector = Icons.Filled.Route,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary,
+                tint = EmeraldGreenDark,
                 modifier = Modifier.size(22.dp),
               )
               Spacer(modifier = Modifier.width(8.dp))
               Text(
                 text = "🛣️ ${calculatedKm.toInt()} km",
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                color = OnEmeraldGreenContainer,
               )
             }
           }
         }
       }
 
-      // Vehicle Size (Includes 8 ft, 9 ft, 10 ft + commercial sizes)
+      // Vehicle Size (Includes 7 ft, 8 ft, 9 ft, 10 ft + commercial sizes)
       Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
           imageVector = Icons.Filled.LocalShipping,
           contentDescription = null,
-          tint = MaterialTheme.colorScheme.primary,
+          tint = RoyalBluePrimary,
           modifier = Modifier.size(18.dp),
         )
         Spacer(modifier = Modifier.width(6.dp))
         Text(
-          text = "🚛 Truck Size (Feet)",
+          text = appStrings.truckSizeFeet,
           style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
         )
       }
@@ -735,7 +763,7 @@ fun CreateLoadBottomSheet(
             label = { Text("$ft ft", fontWeight = FontWeight.Bold) },
             colors =
               FilterChipDefaults.filterChipColors(
-                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                selectedContainerColor = RoyalBluePrimary,
                 selectedLabelColor = Color.White,
               ),
           )
@@ -749,13 +777,13 @@ fun CreateLoadBottomSheet(
             onClick = { selectedBodyType = body.name },
             label = {
               Text(
-                if (body == VehicleBodyType.OPEN) "🛻 ${body.label}" else "🚛 ${body.label}",
+                if (body == VehicleBodyType.OPEN) "🛻 ${appStrings.openVehicle}" else "🚛 ${appStrings.container}",
                 fontWeight = FontWeight.Bold,
               )
             },
             colors =
               FilterChipDefaults.filterChipColors(
-                selectedContainerColor = MaterialTheme.colorScheme.secondary,
+                selectedContainerColor = RoyalBluePrimary,
                 selectedLabelColor = Color.White,
               ),
             modifier = Modifier.weight(1f),
@@ -766,35 +794,38 @@ fun CreateLoadBottomSheet(
       OutlinedTextField(
         value = tonnageText,
         onValueChange = { tonnageText = it.take(6) },
-        label = { Text("⚖️ Weight (Tons)") },
+        label = { Text(appStrings.tonnageLabel) },
         leadingIcon = {
-          Icon(Icons.Filled.Scale, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+          Icon(Icons.Filled.Scale, contentDescription = null, tint = RoyalBluePrimary)
         },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         singleLine = true,
+        shape = RoundedCornerShape(14.dp),
         modifier = Modifier.fillMaxWidth().testTag("load_tonnage_input"),
       )
 
       OutlinedTextField(
         value = materialType,
         onValueChange = { materialType = it.take(80) },
-        label = { Text("📦 Material Type") },
+        label = { Text(appStrings.materialTypeLabel) },
         leadingIcon = {
-          Icon(Icons.Filled.Inventory2, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+          Icon(Icons.Filled.Inventory2, contentDescription = null, tint = RoyalBluePrimary)
         },
         singleLine = true,
+        shape = RoundedCornerShape(14.dp),
         modifier = Modifier.fillMaxWidth().testTag("load_material_input"),
       )
 
       OutlinedTextField(
         value = directPhone,
         onValueChange = { directPhone = it.take(15) },
-        label = { Text("📞 Contact Number") },
+        label = { Text(appStrings.phone) },
         leadingIcon = {
-          Icon(Icons.Filled.Call, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+          Icon(Icons.Filled.Call, contentDescription = null, tint = RoyalBluePrimary)
         },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
         singleLine = true,
+        shape = RoundedCornerShape(14.dp),
         modifier = Modifier.fillMaxWidth().testTag("load_phone_input"),
       )
 
@@ -827,14 +858,14 @@ fun CreateLoadBottomSheet(
         enabled = formValid && !isBusy,
         colors =
           ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
+            containerColor = RoyalBluePrimary,
             contentColor = Color.White,
           ),
         modifier =
           Modifier.fillMaxWidth()
-            .height(56.dp)
+            .height(52.dp)
             .testTag("publish_load_submit_button"),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(50),
       ) {
         if (isBusy) {
           CircularProgressIndicator(
@@ -844,7 +875,7 @@ fun CreateLoadBottomSheet(
           )
         } else {
           Text(
-            text = "Find Truck Now",
+            text = appStrings.publishLoad,
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
           )
         }

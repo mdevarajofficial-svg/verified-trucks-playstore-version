@@ -22,16 +22,16 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Inventory2
-import androidx.compose.material.icons.filled.LocalShipping
-import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Gavel
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.Inventory2
-import androidx.compose.material.icons.outlined.LocalShipping
-import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.filled.Radar
+import androidx.compose.material.icons.filled.Route
+import androidx.compose.material.icons.outlined.Gavel
+import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Radar
+import androidx.compose.material.icons.outlined.Route
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.CircularProgressIndicator
@@ -450,8 +450,8 @@ private fun AuthenticatedWorkspace(
                         privateKyc = privateKyc,
                         isBusy = isBusy,
                         fleetVehiclesState = driverFleetState,
-                        onSaveFleetVehicle = { ft, body, loc, plate ->
-                          viewModel.saveDriverFleetVehicle(ft, body, loc, plate)
+                        onSaveFleetVehicle = { ft, body, loc ->
+                          viewModel.saveDriverFleetVehicle(ft, body, loc)
                         },
                         onEditVehicleOrKyc = { isEditingRoleOrKyc = true },
                         onSignOut = { GoogleAuthHelper.signOut(context, scope) {} },
@@ -553,11 +553,11 @@ private fun MarketplaceBottomBar(
         onClick = { onSelectTab(0) },
         icon = {
           Icon(
-            if (selectedTabIndex == 0) Icons.Filled.Inventory2 else Icons.Outlined.Inventory2,
+            if (selectedTabIndex == 0) Icons.Filled.Gavel else Icons.Outlined.Gavel,
             contentDescription = appStrings.myBids,
           )
         },
-        label = { Text(appStrings.myBids, fontWeight = FontWeight.SemiBold) },
+        label = { Text(appStrings.myBids, fontWeight = FontWeight.Bold) },
         modifier = Modifier.testTag("nav_poster_loads"),
       )
       NavigationBarItem(
@@ -569,7 +569,7 @@ private fun MarketplaceBottomBar(
             unreadCount = unreadCount,
           )
         },
-        label = { Text(appStrings.alerts, fontWeight = FontWeight.SemiBold) },
+        label = { Text(appStrings.alerts, fontWeight = FontWeight.Bold) },
         modifier = Modifier.testTag("nav_notifications"),
       )
       NavigationBarItem(
@@ -581,7 +581,7 @@ private fun MarketplaceBottomBar(
             contentDescription = appStrings.profile,
           )
         },
-        label = { Text(appStrings.profile, fontWeight = FontWeight.SemiBold) },
+        label = { Text(appStrings.profile, fontWeight = FontWeight.Bold) },
         modifier = Modifier.testTag("nav_profile"),
       )
     } else {
@@ -590,11 +590,11 @@ private fun MarketplaceBottomBar(
         onClick = { onSelectTab(0) },
         icon = {
           Icon(
-            if (selectedTabIndex == 0) Icons.Filled.LocalShipping else Icons.Outlined.LocalShipping,
+            if (selectedTabIndex == 0) Icons.Filled.Radar else Icons.Outlined.Radar,
             contentDescription = appStrings.liveLoads,
           )
         },
-        label = { Text(appStrings.liveLoads, fontWeight = FontWeight.SemiBold) },
+        label = { Text(appStrings.liveLoads, fontWeight = FontWeight.Bold) },
         modifier = Modifier.testTag("nav_driver_feed"),
       )
       NavigationBarItem(
@@ -602,11 +602,11 @@ private fun MarketplaceBottomBar(
         onClick = { onSelectTab(1) },
         icon = {
           Icon(
-            if (selectedTabIndex == 1) Icons.Filled.CheckCircle else Icons.Outlined.CheckCircle,
+            if (selectedTabIndex == 1) Icons.Filled.Route else Icons.Outlined.Route,
             contentDescription = appStrings.myTrips,
           )
         },
-        label = { Text(appStrings.myTrips, fontWeight = FontWeight.SemiBold) },
+        label = { Text(appStrings.myTrips, fontWeight = FontWeight.Bold) },
         modifier = Modifier.testTag("nav_driver_won"),
       )
       NavigationBarItem(
@@ -618,7 +618,7 @@ private fun MarketplaceBottomBar(
             unreadCount = unreadCount,
           )
         },
-        label = { Text(appStrings.alerts, fontWeight = FontWeight.SemiBold) },
+        label = { Text(appStrings.alerts, fontWeight = FontWeight.Bold) },
         modifier = Modifier.testTag("nav_notifications"),
       )
       NavigationBarItem(
@@ -630,7 +630,7 @@ private fun MarketplaceBottomBar(
             contentDescription = appStrings.profile,
           )
         },
-        label = { Text(appStrings.profile, fontWeight = FontWeight.SemiBold) },
+        label = { Text(appStrings.profile, fontWeight = FontWeight.Bold) },
         modifier = Modifier.testTag("nav_profile"),
       )
     }
@@ -650,7 +650,7 @@ private fun MarketplaceSideRail(
       NavigationRailItem(
         selected = selectedTabIndex == 0,
         onClick = { onSelectTab(0) },
-        icon = { Icon(Icons.Filled.Inventory2, contentDescription = appStrings.myBids) },
+        icon = { Icon(Icons.Filled.Gavel, contentDescription = appStrings.myBids) },
         label = { Text(appStrings.myBids) },
       )
       NavigationRailItem(
@@ -671,13 +671,13 @@ private fun MarketplaceSideRail(
       NavigationRailItem(
         selected = selectedTabIndex == 0,
         onClick = { onSelectTab(0) },
-        icon = { Icon(Icons.Filled.LocalShipping, contentDescription = appStrings.liveLoads) },
+        icon = { Icon(Icons.Filled.Radar, contentDescription = appStrings.liveLoads) },
         label = { Text(appStrings.liveLoads) },
       )
       NavigationRailItem(
         selected = selectedTabIndex == 1,
         onClick = { onSelectTab(1) },
-        icon = { Icon(Icons.Filled.CheckCircle, contentDescription = appStrings.myTrips) },
+        icon = { Icon(Icons.Filled.Route, contentDescription = appStrings.myTrips) },
         label = { Text(appStrings.myTrips) },
       )
       NavigationRailItem(
@@ -711,7 +711,7 @@ private fun NotificationBadgedIcon(
     }
   ) {
     Icon(
-      imageVector = if (selected) Icons.Filled.Notifications else Icons.Outlined.Notifications,
+      imageVector = if (selected) Icons.Filled.NotificationsActive else Icons.Outlined.NotificationsActive,
       contentDescription = "Notifications",
     )
   }

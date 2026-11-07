@@ -18,8 +18,8 @@ object GeoAndPrivacyUtils {
   const val SIX_HOURS_MILLIS: Long = 6L * 60L * 60L * 1000L
   const val MAX_MATCH_RADIUS_KM: Double = 250.0
 
-  // Includes requested 8ft, 9ft, 10ft alongside full Indian commercial fleet sizes
-  val STANDARD_TRUCK_SIZES_FEET: List<Int> = listOf(8, 9, 10, 14, 17, 20, 22, 24, 32, 40)
+  // Includes requested 7ft, 8ft, 9ft, 10ft alongside full Indian commercial fleet sizes
+  val STANDARD_TRUCK_SIZES_FEET: List<Int> = listOf(7, 8, 9, 10, 14, 17, 19, 20, 22, 24, 32, 40)
 
   val MAJOR_LOGISTICS_HUBS: List<CityHub> =
     listOf(
@@ -180,8 +180,20 @@ object GeoAndPrivacyUtils {
       "ludhiana", "amritsar", "jalandhar" -> "PB"
       "chandigarh" -> "CH"
       "gurugram", "gurgaon", "faridabad", "panipat", "sonipat" -> "HR"
+      "dehradun", "haridwar", "rudrapur", "pantnagar", "roorkee", "rishikesh" -> "UK"
+      "baddi", "solan", "shimla", "kullu", "mandi" -> "HP"
+      "panaji", "panjim", "vasco", "margao", "mapusa", "goa" -> "GA"
       else -> "IN"
     }
     return "$baseCity ($stateCode)"
+  }
+
+  /**
+   * Cleans and returns strictly the city name, stripping any state initials or parenthesis (e.g. "Bengaluru (KA)" -> "Bengaluru").
+   */
+  fun cleanCityNameOnly(rawCity: String): String {
+    val trimmed = rawCity.trim()
+    if (trimmed.isEmpty()) return ""
+    return trimmed.substringBefore("(").substringBefore("/").trim()
   }
 }

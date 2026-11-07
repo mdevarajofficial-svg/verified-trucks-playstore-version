@@ -2,6 +2,12 @@ package com.example.ui.driver
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -25,50 +31,43 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Route
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.VerifiedUser
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -77,6 +76,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -91,9 +92,13 @@ import com.example.data.model.UserPrivateKyc
 import com.example.data.model.UserRoleProfile
 import com.example.data.model.VehicleBodyType
 import com.example.data.util.GeoAndPrivacyUtils
+import com.example.ui.localization.AppLanguage
 import com.example.ui.localization.LocalAppLocalization
 import com.example.ui.localization.LocalLocalizationManager
 import com.example.ui.localization.SupportedLanguage
+import com.example.ui.theme.EmeraldGreenAccent
+import com.example.ui.theme.EmeraldGreenContainer
+import com.example.ui.theme.RoyalBlueContainer
 import com.example.ui.theme.RoyalBluePrimary
 import com.example.ui.theme.RoyalBlueSoftBackground
 import com.example.ui.viewmodel.LoadFeedFilter
@@ -101,6 +106,37 @@ import com.example.ui.viewmodel.UiState
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+// 10+ Major Indian Transport States requested for the filter dropdown
+data class StateOption(val code: String?, val name: String)
+
+val TOP_STATES_FILTER = listOf(
+  StateOption(null, "All States"),
+  StateOption("KA", "Karnataka"),
+  StateOption("TN", "Tamil Nadu"),
+  StateOption("TS", "Telangana"),
+  StateOption("AP", "Andhra Pradesh"),
+  StateOption("KL", "Kerala"),
+  StateOption("MH", "Maharashtra"),
+  StateOption("MP", "Madhya Pradesh"),
+  StateOption("OD", "Odisha"),
+  StateOption("RJ", "Rajasthan"),
+  StateOption("UP", "Uttar Pradesh"),
+  StateOption("WB", "West Bengal"),
+  StateOption("GJ", "Gujarat"),
+  StateOption("PB", "Punjab"),
+  StateOption("HR", "Haryana"),
+  StateOption("DL", "Delhi NCR"),
+  StateOption("BR", "Bihar"),
+  StateOption("JH", "Jharkhand"),
+  StateOption("CG", "Chhattisgarh"),
+  StateOption("AS", "Assam"),
+  StateOption("UK", "Uttarakhand"),
+  StateOption("HP", "Himachal Pradesh"),
+  StateOption("GA", "Goa"),
+)
+
+val FEET_FILTER_OPTIONS = listOf(null, 7, 8, 9, 10, 14, 17, 19, 20, 22, 24, 32, 40)
 
 private fun formatRelativeTime(timestamp: Long): String {
   val diffMillis = System.currentTimeMillis() - timestamp
@@ -121,7 +157,49 @@ private fun formatPickupDate(timestamp: Long): String {
   }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+/**
+ * Real working market style green pulsing object
+ */
+@Composable
+private fun LiveMarketRadarBeacon(modifier: Modifier = Modifier) {
+  val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+  val pulseScale by infiniteTransition.animateFloat(
+    initialValue = 0.85f,
+    targetValue = 1.35f,
+    animationSpec = infiniteRepeatable(
+      animation = tween(1200, easing = FastOutSlowInEasing),
+      repeatMode = RepeatMode.Reverse,
+    ),
+    label = "radar_scale",
+  )
+  val pulseAlpha by infiniteTransition.animateFloat(
+    initialValue = 0.9f,
+    targetValue = 0.25f,
+    animationSpec = infiniteRepeatable(
+      animation = tween(1200, easing = FastOutSlowInEasing),
+      repeatMode = RepeatMode.Reverse,
+    ),
+    label = "radar_alpha",
+  )
+
+  Box(contentAlignment = Alignment.Center, modifier = modifier.size(24.dp)) {
+    Box(
+      modifier = Modifier
+        .size(22.dp)
+        .scale(pulseScale)
+        .clip(CircleShape)
+        .background(EmeraldGreenAccent.copy(alpha = pulseAlpha))
+    )
+    Box(
+      modifier = Modifier
+        .size(10.dp)
+        .clip(CircleShape)
+        .background(EmeraldGreenAccent)
+    )
+  }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DriverLiveFeedContent(
   profile: UserRoleProfile,
@@ -135,11 +213,12 @@ fun DriverLiveFeedContent(
   val appStrings = LocalAppLocalization.current
   val totalVisibleCount = (matchedLoadsState as? UiState.Success)?.data?.size ?: 0
   val formattedCount = String.format(Locale.getDefault(), "%02d", totalVisibleCount)
-  var showFilterModal by remember { mutableStateOf(false) }
 
-  val currentTimeStr = remember {
-    SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
-  }
+  var stateMenuExpanded by remember { mutableStateOf(false) }
+  var feetMenuExpanded by remember { mutableStateOf(false) }
+
+  val currentStateName = TOP_STATES_FILTER.find { it.code == filter.stateCodeFilter }?.name ?: appStrings.allStates
+  val currentFeetName = if (filter.sizeFeetFilter != null) "${filter.sizeFeetFilter} ft" else appStrings.allFeet
 
   Box(
     modifier = Modifier.fillMaxSize(),
@@ -148,147 +227,243 @@ fun DriverLiveFeedContent(
     LazyColumn(
       modifier = Modifier.widthIn(max = 720.dp).fillMaxSize(),
       contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-      verticalArrangement = Arrangement.spacedBy(16.dp),
+      verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-      // 1. Dispatch Board Header (Exact Screenshot Design)
+      // 1. Futuristic Top Section: "Live Loads" with real working market green beacon
       item {
         Column(
           modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 4.dp),
-          verticalArrangement = Arrangement.spacedBy(6.dp),
+          verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-          Text(
-            text = "DISPATCH BOARD  /  $currentTimeStr",
-            style = MaterialTheme.typography.labelSmall.copy(
-              fontWeight = FontWeight.Bold,
-              letterSpacing = 1.2.sp,
-            ),
-            color = RoyalBluePrimary,
-          )
-
           Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Bottom,
+            verticalAlignment = Alignment.CenterVertically,
           ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              LiveMarketRadarBeacon()
+              Spacer(modifier = Modifier.width(8.dp))
               Text(
-                text = "Move freight\nwith certainty.",
+                text = appStrings.liveLoads,
                 style = MaterialTheme.typography.headlineMedium.copy(
                   fontWeight = FontWeight.Black,
-                  lineHeight = 32.sp,
+                  letterSpacing = (-0.5).sp,
                 ),
                 color = MaterialTheme.colorScheme.onSurface,
               )
+              Spacer(modifier = Modifier.width(10.dp))
+              Surface(
+                color = EmeraldGreenContainer,
+                shape = RoundedCornerShape(50),
+              ) {
+                Text(
+                  text = "$formattedCount LIVE",
+                  style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black),
+                  color = EmeraldGreenAccent,
+                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                )
+              }
             }
 
-            Column(horizontalAlignment = Alignment.End) {
-              Text(
-                text = formattedCount,
-                style = MaterialTheme.typography.displaySmall.copy(
-                  fontWeight = FontWeight.Black,
-                ),
-                color = MaterialTheme.colorScheme.onSurface,
-              )
-              Text(
-                text = "LIVE LOADS",
-                style = MaterialTheme.typography.labelSmall.copy(
-                  fontWeight = FontWeight.ExtraBold,
-                  letterSpacing = 0.8.sp,
-                ),
-                color = RoyalBluePrimary,
-              )
+            Button(
+              onClick = onOpenCreateLoad,
+              colors = ButtonDefaults.buttonColors(
+                containerColor = RoyalBluePrimary,
+                contentColor = Color.White,
+              ),
+              shape = RoundedCornerShape(50),
+              contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+              modifier = Modifier.testTag("post_load_header_button"),
+            ) {
+              Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+              Spacer(modifier = Modifier.width(4.dp))
+              Text(appStrings.postLoad, fontWeight = FontWeight.Bold, fontSize = 13.sp)
             }
           }
         }
       }
 
-      // 2. Search & Minimal Filter Button Row (Exact Pill Shape)
+      // 2. Compact Futuristic Filter Bar: "Location" search + State Dropdown + Feet Dropdown
       item {
-        Row(
+        Card(
+          shape = RoundedCornerShape(20.dp),
+          colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+          border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
+          elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
           modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(10.dp),
-          verticalAlignment = Alignment.CenterVertically,
         ) {
-          OutlinedTextField(
-            value = filter.searchQuery,
-            onValueChange = { q -> onUpdateFilter { it.copy(searchQuery = q) } },
-            placeholder = {
-              Text(
-                "Search city, truck or shipper",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-              )
-            },
-            leadingIcon = {
-              Icon(
-                Icons.Filled.Search,
-                contentDescription = "Search",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
-              )
-            },
-            singleLine = true,
-            shape = RoundedCornerShape(50),
-            colors = OutlinedTextFieldDefaults.colors(
-              focusedContainerColor = MaterialTheme.colorScheme.surface,
-              unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-              focusedBorderColor = RoyalBluePrimary,
-              unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
-            ),
-            modifier = Modifier.weight(1f).testTag("driver_feed_search_input"),
-          )
-
-          Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
-            modifier = Modifier.size(54.dp).clickable { showFilterModal = true },
+          Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
           ) {
-            Box(contentAlignment = Alignment.Center) {
-              Icon(
-                imageVector = Icons.Filled.Tune,
-                contentDescription = "Filter",
-                tint = RoyalBluePrimary,
-                modifier = Modifier.size(22.dp),
-              )
+            // Search Bar: Limited to simple "Search Location"
+            OutlinedTextField(
+              value = filter.searchQuery,
+              onValueChange = { q -> onUpdateFilter { it.copy(searchQuery = q) } },
+              placeholder = {
+                Text(
+                  appStrings.searchLocation,
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                )
+              },
+              leadingIcon = {
+                Icon(
+                  Icons.Filled.LocationOn,
+                  contentDescription = "Location",
+                  tint = RoyalBluePrimary,
+                  modifier = Modifier.size(20.dp),
+                )
+              },
+              singleLine = true,
+              shape = RoundedCornerShape(50),
+              colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                focusedBorderColor = RoyalBluePrimary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+              ),
+              modifier = Modifier.fillMaxWidth().testTag("driver_feed_search_input"),
+            )
+
+            // Compact Dropdown Filters Row: States (10 top states) and Truck Feet
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(8.dp),
+              verticalAlignment = Alignment.CenterVertically,
+            ) {
+              // State Dropdown
+              Box(modifier = Modifier.weight(1f)) {
+                Surface(
+                  shape = RoundedCornerShape(12.dp),
+                  color = if (filter.stateCodeFilter != null) RoyalBlueSoftBackground else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                  border = BorderStroke(
+                    1.dp,
+                    if (filter.stateCodeFilter != null) RoyalBluePrimary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                  ),
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { stateMenuExpanded = true }
+                    .padding(vertical = 2.dp)
+                    .testTag("state_dropdown_trigger"),
+                ) {
+                  Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                  ) {
+                    Text(
+                      text = currentStateName,
+                      style = MaterialTheme.typography.bodySmall.copy(
+                        fontWeight = if (filter.stateCodeFilter != null) FontWeight.ExtraBold else FontWeight.Medium,
+                      ),
+                      color = if (filter.stateCodeFilter != null) RoyalBluePrimary else MaterialTheme.colorScheme.onSurface,
+                      maxLines = 1,
+                    )
+                    Icon(
+                      imageVector = Icons.Filled.ArrowDropDown,
+                      contentDescription = "Select State",
+                      tint = if (filter.stateCodeFilter != null) RoyalBluePrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                      modifier = Modifier.size(18.dp),
+                    )
+                  }
+                }
+
+                DropdownMenu(
+                  expanded = stateMenuExpanded,
+                  onDismissRequest = { stateMenuExpanded = false },
+                ) {
+                  TOP_STATES_FILTER.forEach { stateOpt ->
+                    DropdownMenuItem(
+                      text = {
+                        Text(
+                          text = if (stateOpt.code == null) appStrings.allStates else stateOpt.name,
+                          fontWeight = if (filter.stateCodeFilter == stateOpt.code) FontWeight.ExtraBold else FontWeight.Normal,
+                          color = if (filter.stateCodeFilter == stateOpt.code) RoyalBluePrimary else MaterialTheme.colorScheme.onSurface,
+                        )
+                      },
+                      onClick = {
+                        onUpdateFilter { it.copy(stateCodeFilter = stateOpt.code) }
+                        stateMenuExpanded = false
+                      },
+                    )
+                  }
+                }
+              }
+
+              // Feet Dropdown
+              Box(modifier = Modifier.weight(0.7f)) {
+                Surface(
+                  shape = RoundedCornerShape(12.dp),
+                  color = if (filter.sizeFeetFilter != null) RoyalBlueSoftBackground else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                  border = BorderStroke(
+                    1.dp,
+                    if (filter.sizeFeetFilter != null) RoyalBluePrimary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                  ),
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { feetMenuExpanded = true }
+                    .padding(vertical = 2.dp)
+                    .testTag("feet_dropdown_trigger"),
+                ) {
+                  Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                  ) {
+                    Text(
+                      text = currentFeetName,
+                      style = MaterialTheme.typography.bodySmall.copy(
+                        fontWeight = if (filter.sizeFeetFilter != null) FontWeight.ExtraBold else FontWeight.Medium,
+                      ),
+                      color = if (filter.sizeFeetFilter != null) RoyalBluePrimary else MaterialTheme.colorScheme.onSurface,
+                      maxLines = 1,
+                    )
+                    Icon(
+                      imageVector = Icons.Filled.ArrowDropDown,
+                      contentDescription = "Select Feet",
+                      tint = if (filter.sizeFeetFilter != null) RoyalBluePrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                      modifier = Modifier.size(18.dp),
+                    )
+                  }
+                }
+
+                DropdownMenu(
+                  expanded = feetMenuExpanded,
+                  onDismissRequest = { feetMenuExpanded = false },
+                ) {
+                  FEET_FILTER_OPTIONS.forEach { ft ->
+                    DropdownMenuItem(
+                      text = {
+                        Text(
+                          text = if (ft != null) "$ft ft" else appStrings.allFeet,
+                          fontWeight = if (filter.sizeFeetFilter == ft) FontWeight.ExtraBold else FontWeight.Normal,
+                          color = if (filter.sizeFeetFilter == ft) RoyalBluePrimary else MaterialTheme.colorScheme.onSurface,
+                        )
+                      },
+                      onClick = {
+                        onUpdateFilter { it.copy(sizeFeetFilter = ft) }
+                        feetMenuExpanded = false
+                      },
+                    )
+                  }
+                }
+              }
+
+              if (filter.stateCodeFilter != null || filter.sizeFeetFilter != null || filter.searchQuery.isNotBlank()) {
+                TextButton(
+                  onClick = { onUpdateFilter { LoadFeedFilter() } },
+                  contentPadding = PaddingValues(horizontal = 6.dp),
+                ) {
+                  Text("Reset", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.error)
+                }
+              }
             }
           }
         }
       }
 
-      // 3. Section Subheader ("Recommended for your lanes" + "+ Post load")
-      item {
-        Row(
-          modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically,
-        ) {
-          Column {
-            Text(
-              text = "Recommended for your lanes",
-              style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
-              color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-              text = "Verified shippers · Freshest first",
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-          }
-
-          TextButton(
-            onClick = onOpenCreateLoad,
-            colors = ButtonDefaults.textButtonColors(contentColor = RoyalBluePrimary),
-            modifier = Modifier.testTag("post_load_header_button"),
-          ) {
-            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(4.dp))
-            Text("+ Post load", fontWeight = FontWeight.ExtraBold)
-          }
-        }
-      }
-
-      // 4. Live Loads List
+      // 3. Futuristic Live Loads Cards
       when (matchedLoadsState) {
         is UiState.Loading -> {
           item {
@@ -337,12 +512,12 @@ fun DriverLiveFeedContent(
                   )
                   Spacer(modifier = Modifier.height(12.dp))
                   Text(
-                    text = "No Loads Found",
+                    text = appStrings.noLoadsFound,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                   )
                   Spacer(modifier = Modifier.height(6.dp))
                   Text(
-                    text = "Loads matching your search or filters will show up automatically.",
+                    text = appStrings.noLoadsSub,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                   )
@@ -351,7 +526,7 @@ fun DriverLiveFeedContent(
             }
           } else {
             items(matchedLoadsState.data, key = { it.load.id }) { matchedItem ->
-              DriverMatchedLoadCard(
+              FuturisticDriverLoadCard(
                 matchedItem = matchedItem,
                 onClick = { onSelectLoad(matchedItem.load) },
                 onContactClick = { onSelectLoad(matchedItem.load) },
@@ -363,117 +538,29 @@ fun DriverLiveFeedContent(
       }
     }
   }
-
-  // Filter Sheet
-  if (showFilterModal) {
-    ModalBottomSheet(
-      onDismissRequest = { showFilterModal = false },
-      containerColor = MaterialTheme.colorScheme.surface,
-    ) {
-      Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-      ) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically,
-        ) {
-          Text(
-            text = "Filter Loads",
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-          )
-          TextButton(
-            onClick = {
-              onUpdateFilter { LoadFeedFilter() }
-              showFilterModal = false
-            }
-          ) {
-            Text("Reset All", fontWeight = FontWeight.Bold, color = RoyalBluePrimary)
-          }
-        }
-
-        Text(
-          text = "Body Type",
-          style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-          VehicleBodyType.entries.forEach { body ->
-            FilterChip(
-              selected = filter.bodyTypeFilter == body.name,
-              onClick = {
-                onUpdateFilter {
-                  it.copy(bodyTypeFilter = if (it.bodyTypeFilter == body.name) null else body.name)
-                }
-              },
-              label = { Text(if (body == VehicleBodyType.OPEN) "Open" else "Container") },
-              colors = FilterChipDefaults.filterChipColors(
-                selectedContainerColor = RoyalBluePrimary,
-                selectedLabelColor = Color.White,
-              ),
-            )
-          }
-        }
-
-        Text(
-          text = "Truck Size (Feet)",
-          style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-        )
-        FlowRow(
-          horizontalArrangement = Arrangement.spacedBy(8.dp),
-          verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-          GeoAndPrivacyUtils.STANDARD_TRUCK_SIZES_FEET.forEach { ft ->
-            FilterChip(
-              selected = filter.sizeFeetFilter == ft,
-              onClick = {
-                onUpdateFilter {
-                  it.copy(sizeFeetFilter = if (it.sizeFeetFilter == ft) null else ft)
-                }
-              },
-              label = { Text("$ft ft") },
-              colors = FilterChipDefaults.filterChipColors(
-                selectedContainerColor = RoyalBluePrimary,
-                selectedLabelColor = Color.White,
-              ),
-            )
-          }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(
-          onClick = { showFilterModal = false },
-          colors = ButtonDefaults.buttonColors(containerColor = RoyalBluePrimary),
-          shape = RoundedCornerShape(50),
-          modifier = Modifier.fillMaxWidth().height(50.dp),
-        ) {
-          Text("Apply Filters", fontWeight = FontWeight.Bold, color = Color.White)
-        }
-        Spacer(modifier = Modifier.height(20.dp))
-      }
-    }
-  }
 }
 
 /**
- * Live Load Card (Strict Outside Display & Privacy Rules)
- * - Cities & States: Main City + State Code in parentheses (e.g. Bengaluru (KA) → Mumbai (MH))
- * - DO NOT show poster/shipper name anywhere on the card.
- * - DO NOT show street address on the outer card.
- * - Distance: Simple total distance (e.g. 1,020 km)
- * - Specs: PICKUP (date), VEHICLE (feet), LOAD (tons)
- * - Action buttons: Outlined "Contact" & Bold solid Royal Blue pill "Place a bid ⚡"
+ * Futuristic Style Load Post Card:
+ * - NO names of who posted the load or who placed the bid.
+ * - Cities & States: Main City + State Code in parentheses (e.g. Bengaluru (KA) → Mumbai (MH)).
+ * - Distance: Simple total distance (e.g. 1,020 km).
+ * - Specs: PICKUP date, VEHICLE (feet), LOAD (tons).
+ * - Cyber glowing tag, sharp contrast, futuristic royal blue and emerald accents.
+ * - Action buttons: Outlined "Contact" & Bold solid Royal Blue pill "Place a bid ⚡".
  */
 @Composable
-private fun DriverMatchedLoadCard(
+private fun FuturisticDriverLoadCard(
   matchedItem: MatchedLoadItem,
   onClick: () -> Unit,
   onContactClick: () -> Unit,
   onBidClick: () -> Unit,
 ) {
+  val appStrings = LocalAppLocalization.current
   val load = matchedItem.load
   val totalKm = load.resolvedRouteDistanceKm()
-  val fromDisplay = GeoAndPrivacyUtils.resolveCityWithState(load.originCity)
+  val fromDisplay = GeoAndPrivacyUtils.cleanCityNameOnly(load.originCity)
+  val toDisplay = GeoAndPrivacyUtils.cleanCityNameOnly(load.destinationCity)
   val loadTimeMillis = load.createdAt?.toDate()?.time ?: System.currentTimeMillis()
   val relativeTime = formatRelativeTime(loadTimeMillis)
   val pickupDate = formatPickupDate(loadTimeMillis)
@@ -481,19 +568,19 @@ private fun DriverMatchedLoadCard(
   Card(
     modifier = Modifier
       .fillMaxWidth()
-      .clip(RoundedCornerShape(24.dp))
+      .clip(RoundedCornerShape(22.dp))
       .clickable(onClick = onClick)
       .testTag("driver_matched_load_${load.id}"),
-    shape = RoundedCornerShape(24.dp),
+    shape = RoundedCornerShape(22.dp),
     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
+    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+    border = BorderStroke(1.2.dp, RoyalBluePrimary.copy(alpha = 0.25f)),
   ) {
     Column(
       modifier = Modifier.padding(18.dp),
-      verticalArrangement = Arrangement.spacedBy(14.dp),
+      verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-      // Top Row: ● VERIFIED LOAD pill badge + Relative Timestamp
+      // Top Row: Futuristic Cyber Pill Badge + Relative Timestamp
       Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -502,23 +589,24 @@ private fun DriverMatchedLoadCard(
         Surface(
           color = RoyalBlueSoftBackground,
           shape = RoundedCornerShape(50),
+          border = BorderStroke(1.dp, RoyalBluePrimary.copy(alpha = 0.3f)),
         ) {
           Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
           ) {
             Box(
               modifier = Modifier
                 .size(7.dp)
                 .clip(CircleShape)
-                .background(RoyalBluePrimary)
+                .background(EmeraldGreenAccent)
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
-              text = "VERIFIED LOAD",
+              text = appStrings.verifiedLoad,
               style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 0.6.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 0.8.sp,
               ),
               color = RoyalBluePrimary,
             )
@@ -527,12 +615,12 @@ private fun DriverMatchedLoadCard(
 
         Text(
           text = relativeTime,
-          style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+          style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
       }
 
-      // Cities & States Row: FROM Bengaluru (KA) ➔ TO Mumbai (MH) ...
+      // Cities Route without any state initials (NO poster/shipper name anywhere)
       Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -544,12 +632,12 @@ private fun DriverMatchedLoadCard(
         ) {
           Column {
             Text(
-              text = "📍 FROM",
+              text = appStrings.from,
               style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 0.6.sp,
               ),
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
             )
             Text(
               text = fromDisplay,
@@ -560,7 +648,7 @@ private fun DriverMatchedLoadCard(
 
           Spacer(modifier = Modifier.width(12.dp))
           Icon(
-            imageVector = Icons.Filled.ArrowForward,
+            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
             contentDescription = "to",
             tint = RoyalBluePrimary,
             modifier = Modifier.size(18.dp),
@@ -569,12 +657,12 @@ private fun DriverMatchedLoadCard(
 
           Column {
             Text(
-              text = "↕ TO",
+              text = appStrings.to,
               style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 0.6.sp,
               ),
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
             )
             Text(
               text = toDisplay,
@@ -583,13 +671,6 @@ private fun DriverMatchedLoadCard(
             )
           }
         }
-
-        Icon(
-          imageVector = Icons.Filled.MoreVert,
-          contentDescription = "More details",
-          tint = MaterialTheme.colorScheme.onSurfaceVariant,
-          modifier = Modifier.size(20.dp),
-        )
       }
 
       // Specs Row: PICKUP, VEHICLE, LOAD
@@ -607,7 +688,7 @@ private fun DriverMatchedLoadCard(
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
-              text = "PICKUP",
+              text = appStrings.pickup,
               style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
               color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -629,7 +710,7 @@ private fun DriverMatchedLoadCard(
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
-              text = "VEHICLE",
+              text = appStrings.vehicle,
               style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
               color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -651,7 +732,7 @@ private fun DriverMatchedLoadCard(
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
-              text = "LOAD",
+              text = appStrings.load,
               style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
               color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -672,7 +753,7 @@ private fun DriverMatchedLoadCard(
       ) {
         Column {
           Text(
-            text = "BUDGET",
+            text = appStrings.budget,
             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
           )
@@ -683,17 +764,16 @@ private fun DriverMatchedLoadCard(
               fontWeight = FontWeight.Black,
               fontSize = 22.sp,
             ),
-            color = MaterialTheme.colorScheme.onSurface,
+            color = RoyalBluePrimary,
           )
         }
 
         Column(horizontalAlignment = Alignment.End) {
           Text(
-            text = "DISTANCE",
+            text = appStrings.distance,
             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
           )
-          Spacer(modifier = Modifier.height(2.dp))
           Text(
             text = "$totalKm km",
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
@@ -705,7 +785,7 @@ private fun DriverMatchedLoadCard(
       // Buttons Row: Outlined "Contact" & Bold Solid Royal Blue pill "Place a bid ⚡"
       Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
       ) {
         OutlinedButton(
@@ -715,11 +795,11 @@ private fun DriverMatchedLoadCard(
           colors = ButtonDefaults.outlinedButtonColors(
             contentColor = MaterialTheme.colorScheme.onSurface,
           ),
-          modifier = Modifier.weight(0.42f).height(48.dp).testTag("load_contact_btn_${load.id}"),
+          modifier = Modifier.weight(0.42f).height(46.dp).testTag("load_contact_btn_${load.id}"),
         ) {
           Icon(Icons.Filled.Call, contentDescription = null, modifier = Modifier.size(16.dp))
           Spacer(modifier = Modifier.width(6.dp))
-          Text("Contact", fontWeight = FontWeight.Bold)
+          Text(appStrings.contact, fontWeight = FontWeight.Bold)
         }
 
         Button(
@@ -729,9 +809,9 @@ private fun DriverMatchedLoadCard(
             containerColor = RoyalBluePrimary,
             contentColor = Color.White,
           ),
-          modifier = Modifier.weight(0.58f).height(48.dp).testTag("load_place_bid_btn_${load.id}"),
+          modifier = Modifier.weight(0.58f).height(46.dp).testTag("load_place_bid_btn_${load.id}"),
         ) {
-          Text("Place a bid ⚡", fontWeight = FontWeight.Black)
+          Text(appStrings.placeABid, fontWeight = FontWeight.Black)
         }
       }
     }
@@ -820,8 +900,8 @@ fun DriverWonDealsContent(
               val isBidAccepted = trip.bidStatus == "ACCEPTED"
               val isBooked = trip.loadStatus == "BOOKED"
               val isCancelled = trip.loadStatus == "CANCELLED"
-              val fromDisplay = GeoAndPrivacyUtils.resolveCityWithState(trip.originCity)
-              val toDisplay = GeoAndPrivacyUtils.resolveCityWithState(trip.destinationCity)
+              val fromDisplay = GeoAndPrivacyUtils.cleanCityNameOnly(trip.originCity)
+              val toDisplay = GeoAndPrivacyUtils.cleanCityNameOnly(trip.destinationCity)
 
               Card(
                 modifier = Modifier
@@ -918,7 +998,7 @@ fun DriverWonDealsContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                   )
 
-                  // Rule #5: Calling button must contain ONLY the phone number (no names next to it)
+                  // Rule: Calling button must contain ONLY the phone number with exactly ONE phone icon/emoji
                   if (isBidAccepted && !trip.unlockedPosterPhone.isNullOrBlank()) {
                     Button(
                       onClick = {
@@ -949,27 +1029,28 @@ fun DriverWonDealsContent(
 }
 
 /**
- * Profile, Multi-Language Selector & Fleet Vehicle Management Screen
+ * Profile Screen with Language Selection Dropdown Component at the Top (Rule #1)
+ * Supports English, Kannada, Telugu, Tamil, Hindi, Malayalam, and Marathi with dynamic UI update.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProfileAndKycSummaryScreen(
   profile: UserRoleProfile,
   privateKyc: UserPrivateKyc?,
+  isBusy: Boolean = false,
   fleetVehiclesState: List<FleetVehicle> = emptyList(),
-  onSaveFleetVehicle: (feet: Int, bodyType: String, locationCity: String, vehiclePlate: String?) -> Unit = { _, _, _, _ -> },
+  onSaveFleetVehicle: (feet: Int, bodyType: String, locationCity: String) -> Unit = { _, _, _ -> },
   onEditVehicleOrKyc: () -> Unit,
   onSignOut: () -> Unit,
 ) {
   val localizationManager = LocalLocalizationManager.current
   val currentLanguage = localizationManager.currentLanguage
-  var showLanguageDialog by remember { mutableStateOf(false) }
+  var languageDropdownExpanded by remember { mutableStateOf(false) }
 
   // Fleet Vehicle Form State
   var selectedFeet by remember { mutableStateOf(32) }
   var selectedBodyType by remember { mutableStateOf(VehicleBodyType.CONTAINER.name) }
   var vehicleCity by remember { mutableStateOf(profile.currentCity?.ifBlank { "Bengaluru" } ?: "Bengaluru") }
-  var truckPlateNumber by remember { mutableStateOf("") }
   var fleetSuccessMessage by remember { mutableStateOf<String?>(null) }
 
   Box(
@@ -981,60 +1062,92 @@ fun ProfileAndKycSummaryScreen(
       contentPadding = PaddingValues(16.dp),
       verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-      // 1. Language Selector Card (Rule #7)
+      // 1. Language Selection Dropdown Component at the Top of Profile Screen
       item {
         Card(
           shape = RoundedCornerShape(20.dp),
           colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-          border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
+          border = BorderStroke(1.2.dp, RoyalBluePrimary.copy(alpha = 0.35f)),
           elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-          modifier = Modifier.fillMaxWidth().clickable { showLanguageDialog = true },
+          modifier = Modifier.fillMaxWidth(),
         ) {
-          Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-          ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+          Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+              text = "🌐 Select Language / ಭಾಷೆ ಆರಿಸಿ",
+              style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Box(modifier = Modifier.fillMaxWidth()) {
               Surface(
-                shape = CircleShape,
+                shape = RoundedCornerShape(12.dp),
                 color = RoyalBlueSoftBackground,
-                modifier = Modifier.size(40.dp),
+                border = BorderStroke(1.dp, RoyalBluePrimary.copy(alpha = 0.4f)),
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .clickable { languageDropdownExpanded = true }
+                  .testTag("language_selector_dropdown_trigger"),
               ) {
-                Box(contentAlignment = Alignment.Center) {
+                Row(
+                  modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically,
+                ) {
+                  Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                      imageVector = Icons.Filled.Language,
+                      contentDescription = null,
+                      tint = RoyalBluePrimary,
+                      modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                      text = "${currentLanguage.displayName} (${currentLanguage.nativeName})",
+                      style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
+                      color = RoyalBluePrimary,
+                    )
+                  }
                   Icon(
-                    imageVector = Icons.Filled.Language,
-                    contentDescription = "Language",
+                    imageVector = Icons.Filled.ExpandMore,
+                    contentDescription = "Expand",
                     tint = RoyalBluePrimary,
-                    modifier = Modifier.size(22.dp),
                   )
                 }
               }
-              Spacer(modifier = Modifier.width(12.dp))
-              Column {
-                Text(
-                  text = "App Language / ಭಾಷೆ / भाषा",
-                  style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                  text = "${currentLanguage.displayName} (${currentLanguage.nativeName})",
-                  style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
-                  color = RoyalBluePrimary,
-                )
-              }
-            }
 
-            Surface(
-              color = RoyalBlueSoftBackground,
-              shape = RoundedCornerShape(50),
-            ) {
-              Text(
-                text = "Change",
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold),
-                color = RoyalBluePrimary,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-              )
+              DropdownMenu(
+                expanded = languageDropdownExpanded,
+                onDismissRequest = { languageDropdownExpanded = false },
+                modifier = Modifier.widthIn(min = 260.dp),
+              ) {
+                SupportedLanguage.entries.forEach { lang ->
+                  DropdownMenuItem(
+                    text = {
+                      Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                      ) {
+                        Text(
+                          text = lang.nativeName,
+                          fontWeight = if (currentLanguage == lang) FontWeight.ExtraBold else FontWeight.Normal,
+                          color = if (currentLanguage == lang) RoyalBluePrimary else MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                          text = lang.displayName,
+                          style = MaterialTheme.typography.bodySmall,
+                          color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                      }
+                    },
+                    onClick = {
+                      localizationManager.setLanguage(lang.code)
+                      languageDropdownExpanded = false
+                    },
+                  )
+                }
+              }
             }
           }
         }
@@ -1138,7 +1251,7 @@ fun ProfileAndKycSummaryScreen(
         }
       }
 
-      // 3. Vehicle Owner Fleet Management Form (Rule #8)
+      // 3. Vehicle Owner Fleet Management Form
       if (profile.role != "POSTER") {
         item {
           Card(
@@ -1166,7 +1279,7 @@ fun ProfileAndKycSummaryScreen(
                 )
               }
               Text(
-                text = "Add your vehicles to automatically discover loads within 250 km radius.",
+                text = "Add your vehicles to automatically discover matching loads within 250 km radius.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
               )
@@ -1223,17 +1336,6 @@ fun ProfileAndKycSummaryScreen(
                 modifier = Modifier.fillMaxWidth().testTag("fleet_city_input"),
               )
 
-              // Truck Registration Plate (Optional)
-              OutlinedTextField(
-                value = truckPlateNumber,
-                onValueChange = { truckPlateNumber = it.uppercase() },
-                label = { Text("Truck Number (e.g. KA01AB1234 - Optional)") },
-                leadingIcon = { Icon(Icons.Filled.DirectionsBus, contentDescription = null, tint = RoyalBluePrimary) },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth().testTag("fleet_plate_input"),
-              )
-
               if (fleetSuccessMessage != null) {
                 Surface(
                   color = MaterialTheme.colorScheme.secondaryContainer,
@@ -1255,10 +1357,8 @@ fun ProfileAndKycSummaryScreen(
                       selectedFeet,
                       selectedBodyType,
                       vehicleCity.trim(),
-                      truckPlateNumber.trim().ifBlank { null },
                     )
                     fleetSuccessMessage = "✅ Vehicle saved! Loads within 250km will match automatically."
-                    truckPlateNumber = ""
                   }
                 },
                 enabled = vehicleCity.isNotBlank() && !isBusy,
@@ -1293,7 +1393,7 @@ fun ProfileAndKycSummaryScreen(
                           style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                         )
                         Text(
-                          text = "📍 ${veh.currentCity} ${if (!veh.vehiclePlate.isNullOrBlank()) "• ${veh.vehiclePlate}" else ""}",
+                          text = "📍 ${veh.currentCity}",
                           style = MaterialTheme.typography.bodySmall,
                           color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -1318,61 +1418,5 @@ fun ProfileAndKycSummaryScreen(
         }
       }
     }
-  }
-
-  // Language Selection Dialog
-  if (showLanguageDialog) {
-    AlertDialog(
-      onDismissRequest = { showLanguageDialog = false },
-      title = {
-        Text(
-          text = "Select Language / ಭಾಷೆ ಆರಿಸಿ",
-          style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-        )
-      },
-      text = {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-          SupportedLanguage.entries.forEach { lang ->
-            Row(
-              modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .clickable {
-                  localizationManager.setLanguage(lang.code)
-                  showLanguageDialog = false
-                }
-                .padding(vertical = 8.dp, horizontal = 4.dp),
-              verticalAlignment = Alignment.CenterVertically,
-            ) {
-              RadioButton(
-                selected = currentLanguage == lang,
-                onClick = {
-                  localizationManager.setLanguage(lang.code)
-                  showLanguageDialog = false
-                },
-                colors = RadioButtonDefaults.colors(selectedColor = RoyalBluePrimary),
-              )
-              Spacer(modifier = Modifier.width(8.dp))
-              Column {
-                Text(
-                  text = lang.nativeName,
-                  style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold),
-                )
-                Text(
-                  text = lang.displayName,
-                  style = MaterialTheme.typography.bodySmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-              }
-            }
-          }
-        }
-      },
-      confirmButton = {
-        TextButton(onClick = { showLanguageDialog = false }) {
-          Text("Close", fontWeight = FontWeight.Bold, color = RoyalBluePrimary)
-        }
-      },
-    )
   }
 }

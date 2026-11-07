@@ -32,6 +32,8 @@ import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +45,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.unit.sp
+import com.example.ui.localization.LocalAppLocalization
+import com.example.ui.theme.EmeraldGreenAccent
+import com.example.ui.theme.EmeraldGreenContainer
+import com.example.ui.theme.RoyalBluePrimary
+import com.example.ui.theme.RoyalBlueSoftBackground
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -210,11 +218,13 @@ fun AuthSplashScreen(
     )
   }
 
-  // Clean pure white starter/login page with classic V logo + Verified Trucks wordmark and black text
+  val appStrings = LocalAppLocalization.current
+
+  // Futuristic Cyber-Logistics Login & Starter Screen
   Box(
     modifier =
       Modifier.fillMaxSize()
-        .background(Color.White)
+        .background(MaterialTheme.colorScheme.surface)
         .windowInsetsPadding(WindowInsets.safeDrawing),
     contentAlignment = Alignment.Center,
   ) {
@@ -223,14 +233,41 @@ fun AuthSplashScreen(
         Modifier.widthIn(max = 440.dp)
           .fillMaxWidth()
           .verticalScroll(rememberScrollState())
-          .padding(horizontal = 28.dp, vertical = 32.dp),
+          .padding(horizontal = 24.dp, vertical = 28.dp),
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.Center,
     ) {
+      // Live Network Status Pill
+      Surface(
+        shape = RoundedCornerShape(50),
+        color = RoyalBlueSoftBackground,
+        border = BorderStroke(1.dp, RoyalBluePrimary.copy(alpha = 0.35f)),
+      ) {
+        Row(
+          modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Box(
+            modifier = Modifier.size(8.dp).clip(CircleShape).background(EmeraldGreenAccent)
+          )
+          Spacer(modifier = Modifier.width(8.dp))
+          Text(
+            text = "LIVE FREIGHT EXCHANGE",
+            style = MaterialTheme.typography.labelSmall.copy(
+              fontWeight = FontWeight.Black,
+              letterSpacing = 1.sp,
+            ),
+            color = RoyalBluePrimary,
+          )
+        }
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
+
       Image(
         painter = painterResource(id = R.drawable.img_brand_v_logo),
         contentDescription = "Verified Trucks V Logo",
-        modifier = Modifier.size(92.dp),
+        modifier = Modifier.size(96.dp),
         contentScale = ContentScale.Fit,
       )
 
@@ -243,37 +280,48 @@ fun AuthSplashScreen(
         contentScale = ContentScale.FillHeight,
       )
 
-      Spacer(modifier = Modifier.height(16.dp))
+      Spacer(modifier = Modifier.height(12.dp))
 
       Text(
-        text = stringResource(R.string.tagline),
-        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-        color = Color.Black,
+        text = appStrings.panIndiaHub,
+        style = MaterialTheme.typography.titleSmall.copy(
+          fontWeight = FontWeight.Bold,
+          letterSpacing = 0.2.sp,
+        ),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
       )
 
-      Spacer(modifier = Modifier.height(36.dp))
+      Spacer(modifier = Modifier.height(32.dp))
 
-      Column(
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-        horizontalAlignment = Alignment.Start,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+      // Cyber Feature Highlights
+      Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = RoyalBlueSoftBackground.copy(alpha = 0.6f)),
+        border = BorderStroke(1.dp, RoyalBluePrimary.copy(alpha = 0.2f)),
+        modifier = Modifier.fillMaxWidth(),
       ) {
-        SimpleHighlightItem(
-          icon = Icons.Filled.Public,
-          text = stringResource(R.string.highlight_1_title),
-        )
-        SimpleHighlightItem(
-          icon = Icons.Filled.Bolt,
-          text = stringResource(R.string.highlight_2_title),
-        )
-        SimpleHighlightItem(
-          icon = Icons.Filled.CurrencyRupee,
-          text = stringResource(R.string.highlight_3_title),
-        )
+        Column(
+          verticalArrangement = Arrangement.spacedBy(14.dp),
+          horizontalAlignment = Alignment.Start,
+          modifier = Modifier.padding(18.dp),
+        ) {
+          SimpleHighlightItem(
+            icon = Icons.Filled.Public,
+            text = appStrings.panIndiaHub,
+          )
+          SimpleHighlightItem(
+            icon = Icons.Filled.Bolt,
+            text = appStrings.fastPlacement,
+          )
+          SimpleHighlightItem(
+            icon = Icons.Filled.CurrencyRupee,
+            text = appStrings.transparentPricing,
+          )
+        }
       }
 
-      Spacer(modifier = Modifier.height(42.dp))
+      Spacer(modifier = Modifier.height(32.dp))
 
       if (errorMessage != null) {
         Surface(
@@ -284,7 +332,7 @@ fun AuthSplashScreen(
           Text(
             text = "⚠️ ${errorMessage!!}",
             style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-            color = Color.Black,
+            color = MaterialTheme.colorScheme.onErrorContainer,
             modifier = Modifier.padding(12.dp),
           )
         }
@@ -314,37 +362,34 @@ fun AuthSplashScreen(
         enabled = !isLoading,
         modifier =
           Modifier.fillMaxWidth()
-            .height(56.dp)
+            .height(54.dp)
             .testTag("google_sign_in_button"),
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.5.dp, Color.Black),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(50),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp),
         colors =
           ButtonDefaults.buttonColors(
-            containerColor = Color.White,
-            contentColor = Color.Black,
-            disabledContainerColor = Color(0xFFF5F5F5),
-            disabledContentColor = Color.Black.copy(alpha = 0.6f),
+            containerColor = RoyalBluePrimary,
+            contentColor = Color.White,
           ),
       ) {
         if (isLoading) {
           CircularProgressIndicator(
             modifier = Modifier.size(22.dp),
-            color = Color.Black,
+            color = Color.White,
             strokeWidth = 2.5.dp,
           )
         } else {
           Icon(
             imageVector = Icons.Filled.VerifiedUser,
             contentDescription = null,
-            tint = Color.Black,
+            tint = Color.White,
             modifier = Modifier.size(20.dp),
           )
           Spacer(modifier = Modifier.width(10.dp))
           Text(
-            text = "🔐 ${stringResource(R.string.sign_in_with_google)}",
+            text = "🔐 ${appStrings.continueWithGoogle}",
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
-            color = Color.Black,
+            color = Color.White,
           )
         }
       }
